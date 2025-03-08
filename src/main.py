@@ -5,6 +5,7 @@ import os
 import json
 import random
 import time
+import yt_dlp
 
 program_version = '0.1'
 CONFIG_FILE = "config.json"
@@ -51,7 +52,7 @@ class App:
         self.paused_position = None
         self.shuffle_mode = tk.BooleanVar(value=False)
         self.root.configure(bg="#336699")
-        self.title_label = tk.Label(self.root, text="Soundify", font=("Arial", 20, "bold"), bg="#336699", fg="white")
+        self.title_label = tk.Label(self.root, text="Soundify Music Player", font=("Arial", 20, "bold"), bg="#336699", fg="white")
         self.title_label.pack(fill=tk.X, pady=10)
         self.main_frame = tk.Frame(self.root, bg="#ffffff")
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -69,13 +70,20 @@ class App:
         style.theme_use("clam")
         style.configure("Treeview", font=("Arial", 11), rowheight=25)
         style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#e0e0e0")
-        self.song_tree = ttk.Treeview(self.right_frame, columns=("ID", "Name"), show="headings", selectmode="browse")
+        # Added a new column "Play"
+        self.song_tree = ttk.Treeview(self.right_frame, columns=("ID", "Name", "Play"), show="headings", selectmode="browse")
         self.song_tree.heading("ID", text="ID")
         self.song_tree.heading("Name", text="Name")
+        self.song_tree.heading("Play", text="Play")
+        self.song_tree.column("Play", width=50, anchor="center")
         self.song_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.song_tree.bind("<Double-1>", self.edit_song)
+        self.song_tree.bind("<Button-1>", self.on_treeview_click)
         self.song_tree.tag_configure("current", background="black", foreground="white")
-        tk.Button(self.right_frame, text="Add Song", font=("Arial", 10), command=self.add_song, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
+        self.import_frame = tk.Frame(self.right_frame, bg="#ffffff")
+        self.import_frame.pack(fill=tk.X, padx=5, pady=2)
+        tk.Button(self.import_frame, text="Import Song", font=("Arial", 10), command=self.import_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        tk.Button(self.import_frame, text="Download Song", font=("Arial", 10), command=self.download_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         tk.Button(self.right_frame, text="Remove Song", font=("Arial", 10), command=self.remove_song, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
         self.control_frame = tk.Frame(self.right_frame, bg="#d9d9d9")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -84,6 +92,11 @@ class App:
         self.play_pause_btn.pack(side=tk.LEFT, padx=2)
         tk.Button(self.control_frame, text="Next", font=("Arial", 10), command=self.next_song, bg="#cccccc").pack(side=tk.LEFT, padx=2)
         tk.Checkbutton(self.control_frame, text="Shuffle", font=("Arial", 10), variable=self.shuffle_mode, bg="#d9d9d9").pack(side=tk.LEFT, padx=2)
+        tk.Label(self.control_frame, text="Volume", font=("Arial", 10), bg="#d9d9d9").pack(side=tk.LEFT, padx=2)
+        self.volume_slider = tk.Scale(self.control_frame, from_=0, to=100, orient=tk.HORIZONTAL, length=100, command=self.change_volume, bg="#d9d9d9")
+        self.volume_slider.set(50)
+        pygame.mixer.music.set_volume(0.5)
+        self.volume_slider.pack(side=tk.LEFT, padx=2)
         self.now_playing_label = tk.Label(self.right_frame, text="Now Playing: None", font=("Arial", 12), bg="#ffffff")
         self.now_playing_label.pack(pady=5)
         self.slider = tk.Scale(self.right_frame, from_=0, to=100, orient=tk.HORIZONTAL, length=300, command=self.slider_seek, bg="#ffffff")
@@ -96,6 +109,19 @@ class App:
         m = int(seconds) // 60
         s = int(seconds) % 60
         return f"{m:02d}:{s:02d}"
+
+    def on_treeview_click(self, event):
+        region = self.song_tree.identify("region", event.x, event.y)
+        if region == "cell":
+            col = self.song_tree.identify_column(event.x)
+            if col == "#3":
+                item = self.song_tree.identify_row(event.y)
+                if item:
+                    songs = self.playlists[self.selected_playlist]
+                    for s in songs:
+                        if s["id"] == item:
+                            self.play_song(s)
+                            return "break"
 
     def refresh_playlists(self):
         self.playlist_listbox.delete(0, tk.END)
@@ -128,7 +154,7 @@ class App:
                 songs_sorted = songs
             for song in songs_sorted:
                 tags = ("current",) if self.current_song and song["id"] == self.current_song["id"] else ()
-                self.song_tree.insert("", tk.END, iid=song["id"], values=(song["id"], song["name"]), tags=tags)
+                self.song_tree.insert("", tk.END, iid=song["id"], values=(song["id"], song["name"], "▶"), tags=tags)
 
     def update_highlight(self):
         for item in self.song_tree.get_children():
@@ -186,7 +212,7 @@ class App:
             tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
             tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
 
-    def add_song(self):
+    def import_song(self):
         if not self.selected_playlist:
             messagebox.showerror("Error", "Select a playlist first")
             return
@@ -210,7 +236,7 @@ class App:
             self.refresh_songs()
             top.destroy()
         top = tk.Toplevel(self.root)
-        top.title("Add Song")
+        top.title("Import Song")
         tk.Label(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
         id_var = tk.StringVar(value=default_id)
         tk.Entry(top, textvariable=id_var, font=("Arial", 12)).pack(padx=5, pady=5)
@@ -218,6 +244,48 @@ class App:
         name_var = tk.StringVar(value=default_name)
         tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
         tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
+
+    def download_song(self):
+        def download():
+            url = url_var.get().strip()
+            if url == "":
+                messagebox.showerror("Error", "URL cannot be empty")
+                return
+            try:
+                sound_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Sound")
+                if not os.path.exists(sound_dir):
+                    os.makedirs(sound_dir)
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'outtmpl': os.path.join(sound_dir, '%(title)s.%(ext)s'),
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '320',
+                    }],
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    downloaded_filename = ydl.prepare_filename(info)
+                base, _ = os.path.splitext(downloaded_filename)
+                mp3_filename = base + ".mp3"
+                messagebox.showinfo("Success", f"Downloaded to {mp3_filename}")
+                # Automatically add the song to the selected playlist if one is selected
+                if self.selected_playlist:
+                    default_id = str(len(self.playlists[self.selected_playlist]) + 1)
+                    default_name = os.path.basename(mp3_filename)
+                    new_song = {"id": default_id, "name": default_name, "file": mp3_filename}
+                    self.playlists[self.selected_playlist].append(new_song)
+                    self.refresh_songs()
+            except Exception as e:
+                messagebox.showerror("Error", f"Download failed: {e}")
+            top.destroy()
+        top = tk.Toplevel(self.root)
+        top.title("Download Song from YouTube")
+        tk.Label(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
+        url_var = tk.StringVar()
+        tk.Entry(top, textvariable=url_var, font=("Arial", 12), width=50).pack(padx=5, pady=5)
+        tk.Button(top, text="Download", font=("Arial", 12), command=download, bg="#cccccc").pack(padx=5, pady=5)
 
     def remove_song(self):
         selected_item = self.song_tree.selection()
@@ -372,6 +440,10 @@ class App:
                 self.paused_position = pos
         except Exception:
             pass
+
+    def change_volume(self, value):
+        vol = float(value) / 100.0
+        pygame.mixer.music.set_volume(vol)
 
     def update_slider(self):
         if not self.selected_playlist:
