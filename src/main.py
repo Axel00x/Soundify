@@ -26,7 +26,6 @@ class Song:
 
 class App:
     def __init__(self, root):
-        # Inizializzazione e configurazione dell'interfaccia
         self.root = root
         self.root.title(f"Soundify Music Player (v{program_version})")
         self.data = load_config()

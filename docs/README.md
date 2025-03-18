@@ -1,8 +1,7 @@
 # Soundify
 
 <div>
-    <img src="../res/preview.png" alt="Preview" style="display: inline-block; width: 40%;">
-    <img src="../res/preview_fullscreen.png" alt="Preview fullscreen" style="display: inline-block; width: 55%;">
+    <img src="../res/preview.png" alt="Preview" style="display: inline-block; width: 100%;">
 </div>
 
 Soundify is a Song player without any limitations or ads. Enjoy a seamless music experience with all your favorite features available locally on your device.
