@@ -1,2 +1,4 @@
 pygame==2.6.1
+tkinter
 yt_dlp==2025.2.19
+spotdl

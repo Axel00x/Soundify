@@ -2,24 +2,15 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pygame
 import os
-import json
 import random
 import time
-import yt_dlp
+import subprocess
+import threading
 
-program_version = '0.1'
-CONFIG_FILE = "config.json"
+from dep.config import *
+from dep.settings import *
+
 pygame.mixer.init()
-
-def save_config(data):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(data, f)
-
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    return {"playlists": {}}
 
 class Song:
     def __init__(self, song_id, name, file):
@@ -35,6 +26,7 @@ class Song:
 
 class App:
     def __init__(self, root):
+        # Inizializzazione e configurazione dell'interfaccia
         self.root = root
         self.root.title(f"Soundify Music Player (v{program_version})")
         self.data = load_config()
@@ -70,12 +62,12 @@ class App:
         style.theme_use("clam")
         style.configure("Treeview", font=("Arial", 11), rowheight=25)
         style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#e0e0e0")
-        # Added a new column "Play"
         self.song_tree = ttk.Treeview(self.right_frame, columns=("ID", "Name", "Play"), show="headings", selectmode="browse")
         self.song_tree.heading("ID", text="ID")
         self.song_tree.heading("Name", text="Name")
         self.song_tree.heading("Play", text="Play")
-        self.song_tree.column("Play", width=50, anchor="center")
+        self.song_tree.column("ID", width=5, anchor="center")
+        self.song_tree.column("Play", width=15, anchor="center")
         self.song_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.song_tree.bind("<Double-1>", self.edit_song)
         self.song_tree.bind("<Button-1>", self.on_treeview_click)
@@ -83,7 +75,8 @@ class App:
         self.import_frame = tk.Frame(self.right_frame, bg="#ffffff")
         self.import_frame.pack(fill=tk.X, padx=5, pady=2)
         tk.Button(self.import_frame, text="Import Song", font=("Arial", 10), command=self.import_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        tk.Button(self.import_frame, text="Download Song", font=("Arial", 10), command=self.download_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        tk.Button(self.import_frame, text="Download Song (YouTube)", font=("Arial", 10), command=self.download_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        tk.Button(self.import_frame, text="Download Song (Spotify)", font=("Arial", 10), command=self.download_song_spotify, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         tk.Button(self.right_frame, text="Remove Song", font=("Arial", 10), command=self.remove_song, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
         self.control_frame = tk.Frame(self.right_frame, bg="#d9d9d9")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -212,6 +205,78 @@ class App:
             tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
             tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
 
+    def download_song_spotify(self):
+        top = tk.Toplevel(self.root)
+        top.title("Download Song from Spotify")
+        tk.Label(top, text="Spotify URL:", font=("Arial", 12)).pack(padx=5, pady=5)
+        url_var = tk.StringVar()
+        tk.Entry(top, textvariable=url_var, font=("Arial", 12), width=50).pack(padx=5, pady=5)
+        
+        progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
+        progress_label.pack(padx=5, pady=5)
+        progress_bar = ttk.Progressbar(top, mode='indeterminate')
+        progress_bar.pack(padx=5, pady=5, fill=tk.X)
+        cancel_btn = tk.Button(top, text="Cancel", font=("Arial", 12))
+        cancel_btn.pack(padx=5, pady=5)
+        
+        def start_download():
+            url = url_var.get().strip()
+            if url == "":
+                messagebox.showerror("Error", "Spotify URL cannot be empty")
+                return
+            sound_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Sound")
+            if not os.path.exists(sound_dir):
+                os.makedirs(sound_dir)
+            initial_files = set(os.listdir(sound_dir))
+            command = ["spotdl", url, "--output", os.path.join(sound_dir)]
+            
+            progress_bar.start()
+            progress_label.config(text="Downloading...")
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            cancelled = False
+
+            def cancel_download():
+                nonlocal cancelled
+                cancelled = True
+                process.terminate()
+                progress_label.config(text="Cancelling...")
+
+            cancel_btn.config(command=cancel_download)
+            stdout, stderr = process.communicate()
+            progress_bar.stop()
+            
+            if cancelled:
+                progress_label.config(text="Download cancelled.")
+                top.after(2000, top.destroy)
+                return
+            if process.returncode != 0:
+                messagebox.showerror("Error", f"Spotify Download failed: {stderr}")
+                top.destroy()
+                return
+            progress_label.config(text="Download complete.")
+            top.after(1000, top.destroy)
+            
+            time.sleep(1)
+            new_files = set(os.listdir(sound_dir)) - initial_files
+            
+            if self.selected_playlist is None:
+                messagebox.showwarning("Warning", "Nessuna playlist selezionata. I brani scaricati non verranno aggiunti automaticamente.")
+                return
+            
+            for filename in new_files:
+                if not filename.lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg')):
+                    continue
+                file_path = os.path.join(sound_dir, filename)
+                default_id = str(len(self.playlists[self.selected_playlist]) + 1)
+                new_song = {"id": default_id, "name": filename, "file": file_path}
+                self.playlists[self.selected_playlist].append(new_song)
+            self.refresh_songs()
+        
+        download_btn = tk.Button(top, text="Download", font=("Arial", 12),
+                                command=lambda: threading.Thread(target=start_download).start(),
+                                bg="#cccccc")
+        download_btn.pack(padx=5, pady=5)
+
     def import_song(self):
         if not self.selected_playlist:
             messagebox.showerror("Error", "Select a playlist first")
@@ -246,46 +311,81 @@ class App:
         tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
 
     def download_song(self):
-        def download():
-            url = url_var.get().strip()
-            if url == "":
-                messagebox.showerror("Error", "URL cannot be empty")
-                return
-            try:
-                sound_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Sound")
-                if not os.path.exists(sound_dir):
-                    os.makedirs(sound_dir)
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'outtmpl': os.path.join(sound_dir, '%(title)s.%(ext)s'),
-                    'postprocessors': [{
-                        'key': 'FFmpegExtractAudio',
-                        'preferredcodec': 'mp3',
-                        'preferredquality': '320',
-                    }],
-                }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(url, download=True)
-                    downloaded_filename = ydl.prepare_filename(info)
-                base, _ = os.path.splitext(downloaded_filename)
-                mp3_filename = base + ".mp3"
-                messagebox.showinfo("Success", f"Downloaded to {mp3_filename}")
-                # Automatically add the song to the selected playlist if one is selected
-                if self.selected_playlist:
-                    default_id = str(len(self.playlists[self.selected_playlist]) + 1)
-                    default_name = os.path.basename(mp3_filename)
-                    new_song = {"id": default_id, "name": default_name, "file": mp3_filename}
-                    self.playlists[self.selected_playlist].append(new_song)
-                    self.refresh_songs()
-            except Exception as e:
-                messagebox.showerror("Error", f"Download failed: {e}")
-            top.destroy()
         top = tk.Toplevel(self.root)
         top.title("Download Song from YouTube")
         tk.Label(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
         url_var = tk.StringVar()
         tk.Entry(top, textvariable=url_var, font=("Arial", 12), width=50).pack(padx=5, pady=5)
-        tk.Button(top, text="Download", font=("Arial", 12), command=download, bg="#cccccc").pack(padx=5, pady=5)
+        
+        progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
+        progress_label.pack(padx=5, pady=5)
+        progress_bar = ttk.Progressbar(top, mode='indeterminate')
+        progress_bar.pack(padx=5, pady=5, fill=tk.X)
+        cancel_btn = tk.Button(top, text="Cancel", font=("Arial", 12))
+        cancel_btn.pack(padx=5, pady=5)
+        
+        def start_download():
+            url = url_var.get().strip()
+            if url == "":
+                messagebox.showerror("Error", "URL cannot be empty")
+                return
+            sound_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Sound")
+            if not os.path.exists(sound_dir):
+                os.makedirs(sound_dir)
+            initial_files = set(os.listdir(sound_dir))
+            command = [
+                "yt-dlp",
+                "-f", "bestaudio/best",
+                "-o", os.path.join(sound_dir),
+                url
+            ]
+            
+            progress_bar.start()
+            progress_label.config(text="Downloading...")
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            cancelled = False
+
+            def cancel_download():
+                nonlocal cancelled
+                cancelled = True
+                process.terminate()
+                progress_label.config(text="Cancelling...")
+            
+            cancel_btn.config(command=cancel_download)
+            stdout, stderr = process.communicate()
+            progress_bar.stop()
+            
+            if cancelled:
+                progress_label.config(text="Download cancelled.")
+                top.after(2000, top.destroy)
+                return
+            if process.returncode != 0:
+                messagebox.showerror("Error", f"Download failed: {stderr}")
+                top.destroy()
+                return
+            progress_label.config(text="Download complete.")
+            top.after(1000, top.destroy)
+            
+            time.sleep(1)  
+            new_files = set(os.listdir(sound_dir)) - initial_files
+            
+            if self.selected_playlist is None:
+                messagebox.showwarning("Warning", "Nessuna playlist selezionata. I brani scaricati non verranno aggiunti automaticamente.")
+                return
+            
+            for filename in new_files:
+                if not filename.lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg')):
+                    continue
+                file_path = os.path.join(sound_dir, filename)
+                default_id = str(len(self.playlists[self.selected_playlist]) + 1)
+                new_song = {"id": default_id, "name": filename, "file": file_path}
+                self.playlists[self.selected_playlist].append(new_song)
+            self.refresh_songs()
+        
+        download_btn = tk.Button(top, text="Download", font=("Arial", 12),
+                                command=lambda: threading.Thread(target=start_download).start(),
+                                bg="#cccccc")
+        download_btn.pack(padx=5, pady=5)
 
     def remove_song(self):
         selected_item = self.song_tree.selection()
