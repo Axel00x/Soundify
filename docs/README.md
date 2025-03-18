@@ -20,7 +20,7 @@ Soundify is a Song player without any limitations or ads. Enjoy a seamless music
 Soundify is designed to provide a user-friendly interface where you can manage your music library effortlessly. Whether you're creating a new playlist or downloading your favorite tracks from YouTube, Soundify offers a streamlined and efficient experience.
 
 ## Getting Started
-1. **Installation**: Follow the installation guide provided in the [documentation](Installation).
+1. **Installation**: Follow the installation guide provided in the [documentation](Installation.md).
 2. **Usage**: Start the application
 
 ## Contributing
