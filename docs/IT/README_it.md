@@ -12,6 +12,7 @@ Soundify è un song player senza limiti o pubblicità. Goditi un'esperienza musi
 - **Controllo del Volume**: Aumenta o diminuisci l'audio in modo semplice.
 - **Modalità di Riproduzione**: Ascolta la tua musica in modalità lineare (sequenziale) o shuffle (casuale).
 - **Download da YouTube**: Scarica direttamente le canzoni da YouTube.
+- **Download da Spotify**: Scarica direttamente le canzoni da Spotify (playlist o canzoni).
 - **Disponibilità Offline**: Tutto funziona in locale, per cui puoi ascoltare la musica anche offline.
 - **Nessuna Pubblicità**: Ascolta la tua musica senza interruzioni da pubblicità.
 
@@ -21,9 +22,6 @@ Soundify è pensato per offrire un'interfaccia intuitiva dove gestire facilmente
 ## Come Iniziare
 1. **Installazione**: Segui la guida all'installazione presente nella [documentazione](Installation).
 2. **Utilizzo**: Avvia l'applicazione.
-
-## Contribuire
-I contributi sono benvenuti! Consulta le linee guida per contribuire per ulteriori dettagli su come migliorare Soundify.
 
 ## Licenza
 Questo progetto è rilasciato sotto i termini della [Licenza MIT](LICENSE).
