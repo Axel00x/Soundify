@@ -20,8 +20,8 @@ Soundify è un song player senza limiti o pubblicità. Goditi un'esperienza musi
 Soundify è pensato per offrire un'interfaccia intuitiva dove gestire facilmente la tua libreria musicale. Che tu stia creando una nuova playlist o scaricando i tuoi brani preferiti da YouTube, Soundify ti offre un'esperienza fluida ed efficiente.
 
 ## Come Iniziare
-1. **Installazione**: Segui la guida all'installazione presente nella [documentazione](Installation).
+1. **Installazione**: Segui la guida all'installazione presente nella [documentazione](../Installation).
 2. **Utilizzo**: Avvia l'applicazione.
 
 ## Licenza
-Questo progetto è rilasciato sotto i termini della [Licenza MIT](LICENSE).
+Questo progetto è rilasciato sotto i termini della [Licenza MIT](../LICENSE).
