@@ -227,7 +227,7 @@ class App:
             if not os.path.exists(sound_dir):
                 os.makedirs(sound_dir)
             initial_files = set(os.listdir(sound_dir))
-            command = ["spotdl", url, "--output", os.path.join(sound_dir)]
+            command = ["spotdl", url, "--output", os.path.join(sound_dir), "--bitrate", "192k"]
             
             progress_bar.start()
             progress_label.config(text="Downloading...")
@@ -333,12 +333,11 @@ class App:
                 os.makedirs(sound_dir)
             initial_files = set(os.listdir(sound_dir))
             command = [
-                "yt-dlp",
-                "-f", "bestaudio/best",
-                "-o", os.path.join(sound_dir),
+                "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
+                "-o", os.path.join(sound_dir, "%(title)s.%(ext)s"),
                 url
             ]
-            
+                        
             progress_bar.start()
             progress_label.config(text="Downloading...")
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
