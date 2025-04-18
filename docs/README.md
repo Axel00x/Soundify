@@ -10,6 +10,7 @@ Soundify is a Song player without any limitations or ads. Enjoy a seamless music
 - **Playlist Management**: Create, modify, and delete playlists.
 - **Song Management**: Add and remove songs from your playlists.
 - **Volume Control**: Increase or decrease audio easily.
+- **Volume Booster**: Increases the volume output up to twice as much. (Default: 50 = 100%; Max: 100 = 200%)
 - **Playback Modes**: Enjoy your music with either a linear (sequential) or shuffle (random) playback system.
 - **YouTube Downloads**: Download songs directly from YouTube.
 - **Spotify Downloads**: Download songs directly from Spotify (playlists or songs).
