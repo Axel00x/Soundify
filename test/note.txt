@@ -1,0 +1,1 @@
+pyinstaller --onefile --clean --name Soundify --add-data "src/dep:dep" --add-data "src/Sound:Sound" src/main.py

@@ -3,9 +3,13 @@ from tkinter import ttk, filedialog, messagebox
 import pygame
 import os
 import random
-import time
+import time as t
 import subprocess
 import threading
+
+from termcolor import colored
+from datetime import datetime
+
 
 from dep.config import *
 from dep.settings import *
@@ -229,6 +233,12 @@ class App:
             initial_files = set(os.listdir(sound_dir))
             command = ["spotdl", url, "--output", os.path.join(sound_dir), "--bitrate", "192k"]
             
+            
+            if debug_mode:
+                time = datetime.now().strftime("%H:%M:%S")
+                print(colored(f"{time}",'white'), colored(f"Dowloading Spotify song with command: {' '.join(command)}",'green'))
+                print(colored(f"{time}",'white'), colored(f"Sound directory: {sound_dir}",'green'))
+
             progress_bar.start()
             progress_label.config(text="Downloading...")
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
@@ -255,11 +265,11 @@ class App:
             progress_label.config(text="Download complete.")
             top.after(1000, top.destroy)
             
-            time.sleep(1)
+            t.sleep(1)
             new_files = set(os.listdir(sound_dir)) - initial_files
             
             if self.selected_playlist is None:
-                messagebox.showwarning("Warning", "Nessuna playlist selezionata. I brani scaricati non verranno aggiunti automaticamente.")
+                messagebox.showwarning("Warning", "No playlist selected. Downloaded songs will not be added automatically.")
                 return
             
             for filename in new_files:
@@ -337,6 +347,12 @@ class App:
                 "-o", os.path.join(sound_dir, "%(title)s.%(ext)s"),
                 url
             ]
+            
+            if debug_mode:
+                time = datetime.now().strftime("%H:%M:%S")
+                print(colored(f"{time}",'white'), colored(f"Dowloading YT song with command: {' '.join(command)}",'green'))
+                print(colored(f"{time}",'white'), colored(f"Sound directory: {sound_dir}",'green'))
+
                         
             progress_bar.start()
             progress_label.config(text="Downloading...")
@@ -364,7 +380,7 @@ class App:
             progress_label.config(text="Download complete.")
             top.after(1000, top.destroy)
             
-            time.sleep(1)  
+            t.sleep(1)  
             new_files = set(os.listdir(sound_dir)) - initial_files
             
             if self.selected_playlist is None:
