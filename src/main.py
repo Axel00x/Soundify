@@ -16,6 +16,8 @@ from dep.settings import *
 
 pygame.mixer.init()
 
+debug_mode = load_settings()
+
 class Song:
     def __init__(self, song_id, name, file):
         self.song_id = song_id
@@ -46,60 +48,96 @@ class App:
         self.seek_offset = 0
         self.paused_position = None
         self.shuffle_mode = tk.BooleanVar(value=False)
-        self.root.configure(bg="#336699")
-        self.title_label = tk.Label(self.root, text="Soundify Music Player", font=("Arial", 20, "bold"), bg="#336699", fg="white")
+        self.ask_on_delete = tk.BooleanVar(value=settings.ask_on_delete)
+        self.root.configure(bg="#1DB954")
+        font_primary = ("Helvetica Neue", 14)
+        ttk.Style().configure("TButton", font=font_primary, relief="flat", borderwidth=0, padding=6)
+        self.title_label = tk.Label(self.root, text="Soundify Music Player", font=("Helvetica Neue", 24, "bold"), bg="#1DB954", fg="white")
         self.title_label.pack(fill=tk.X, pady=10)
         self.main_frame = tk.Frame(self.root, bg="#ffffff")
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.left_frame = tk.Frame(self.main_frame, bg="#f0f0f0")
+        self.left_frame = tk.Frame(self.main_frame, bg="#f7f7f7")
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0,10))
         self.right_frame = tk.Frame(self.main_frame, bg="#ffffff")
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.playlist_listbox = tk.Listbox(self.left_frame, font=("Arial", 12))
+        self.playlist_listbox = tk.Listbox(self.left_frame, font=font_primary, bd=0, highlightthickness=0, selectbackground="#1DB954", fg="#333")
         self.playlist_listbox.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.playlist_listbox.bind("<<ListboxSelect>>", self.on_playlist_select)
-        tk.Button(self.left_frame, text="Add Playlist", font=("Arial", 10), command=self.add_playlist, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
-        tk.Button(self.left_frame, text="Remove Playlist", font=("Arial", 10), command=self.remove_playlist, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
-        tk.Button(self.left_frame, text="Rename Playlist", font=("Arial", 10), command=self.rename_playlist, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
+        ttk.Button(self.left_frame, text="Add Playlist", command=self.add_playlist).pack(fill=tk.X, padx=5, pady=2)
+        ttk.Button(self.left_frame, text="Remove Playlist", command=self.remove_playlist).pack(fill=tk.X, padx=5, pady=2)
+        ttk.Button(self.left_frame, text="Rename Playlist", command=self.rename_playlist).pack(fill=tk.X, padx=5, pady=2)
+        ttk.Button(self.left_frame, text="Settings", command=self.open_settings).pack(fill=tk.X, padx=5, pady=20)
+
+        # Info label
+        self.label_info = ttk.Label(self.left_frame, text="Hello World")
+        self.label_info.pack(fill=tk.Y, padx=1, pady=2)
+        self.update_label_info(self.label_info)
+
+
         style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Treeview", font=("Arial", 11), rowheight=25)
-        style.configure("Treeview.Heading", font=("Arial", 12, "bold"), background="#e0e0e0")
+        style.configure("Treeview", font=("Helvetica Neue", 12), rowheight=28)
+        style.configure("Treeview.Heading", font=("Helvetica Neue", 13, "bold"))
         self.song_tree = ttk.Treeview(self.right_frame, columns=("ID", "Name", "Play"), show="headings", selectmode="browse")
         self.song_tree.heading("ID", text="ID")
         self.song_tree.heading("Name", text="Name")
-        self.song_tree.heading("Play", text="Play")
-        self.song_tree.column("ID", width=5, anchor="center")
-        self.song_tree.column("Play", width=15, anchor="center")
+        self.song_tree.heading("Play", text="")
+        self.song_tree.column("ID", width=30, anchor="center")
+        self.song_tree.column("Play", width=30, anchor="center")
         self.song_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.song_tree.bind("<Double-1>", self.edit_song)
         self.song_tree.bind("<Button-1>", self.on_treeview_click)
-        self.song_tree.tag_configure("current", background="black", foreground="white")
+        self.song_tree.tag_configure("current", background="#1DB954", foreground="white")
+        
         self.import_frame = tk.Frame(self.right_frame, bg="#ffffff")
         self.import_frame.pack(fill=tk.X, padx=5, pady=2)
-        tk.Button(self.import_frame, text="Import Song", font=("Arial", 10), command=self.import_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        tk.Button(self.import_frame, text="Download Song (YouTube)", font=("Arial", 10), command=self.download_song, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        tk.Button(self.import_frame, text="Download Song (Spotify)", font=("Arial", 10), command=self.download_song_spotify, bg="#cccccc").pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        tk.Button(self.right_frame, text="Remove Song", font=("Arial", 10), command=self.remove_song, bg="#cccccc").pack(fill=tk.X, padx=5, pady=2)
-        self.control_frame = tk.Frame(self.right_frame, bg="#d9d9d9")
+        ttk.Button(self.import_frame, text="Import Song", command=self.import_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        ttk.Button(self.import_frame, text="Download YouTube", command=self.download_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        ttk.Button(self.import_frame, text="Download Spotify", command=self.download_song_spotify).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        ttk.Button(self.right_frame, text="Remove Song", command=self.remove_song).pack(fill=tk.X, padx=5, pady=2)
+        self.control_frame = tk.Frame(self.right_frame, bg="#fafafa")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
-        tk.Button(self.control_frame, text="Previous", font=("Arial", 10), command=self.previous_song, bg="#cccccc").pack(side=tk.LEFT, padx=2)
-        self.play_pause_btn = tk.Button(self.control_frame, text="Pause", font=("Arial", 10), command=self.toggle_pause, bg="#cccccc")
-        self.play_pause_btn.pack(side=tk.LEFT, padx=2)
-        tk.Button(self.control_frame, text="Next", font=("Arial", 10), command=self.next_song, bg="#cccccc").pack(side=tk.LEFT, padx=2)
-        tk.Checkbutton(self.control_frame, text="Shuffle", font=("Arial", 10), variable=self.shuffle_mode, bg="#d9d9d9").pack(side=tk.LEFT, padx=2)
-        tk.Label(self.control_frame, text="Volume", font=("Arial", 10), bg="#d9d9d9").pack(side=tk.LEFT, padx=2)
-        self.volume_slider = tk.Scale(self.control_frame, from_=0, to=100, orient=tk.HORIZONTAL, length=100, command=self.change_volume, bg="#d9d9d9")
-        self.volume_slider.set(50)
-        pygame.mixer.music.set_volume(0.5)
-        self.volume_slider.pack(side=tk.LEFT, padx=2)
-        self.now_playing_label = tk.Label(self.right_frame, text="Now Playing: None", font=("Arial", 12), bg="#ffffff")
+        res = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "res"))
+        icons = {name: tk.PhotoImage(file=os.path.join(res, f"{name}.png")).subsample(1,1) for name in ("prev","play","pause","next","shuffle")}
+        
+        # Prev Button
+        self.prev_btn = ttk.Button(self.control_frame, image=icons["prev"], command=self.previous_song)
+        self.prev_btn.image = icons["prev"]
+        self.prev_btn.pack(side=tk.LEFT, padx=4)
+        
+        # Play/Pause Button
+        self.play_pause_btn = ttk.Button(self.control_frame, image=icons["pause"], command=self.toggle_pause)
+        self.play_pause_btn.image = icons["pause"]
+        self.play_pause_btn.pack(side=tk.LEFT, padx=4)
+        
+        # Next Button
+        self.next_btn = ttk.Button(self.control_frame, image=icons["next"], command=self.next_song)
+        self.next_btn.image = icons["next"]
+        self.next_btn.pack(side=tk.LEFT, padx=4)
+        
+        # Shuffle Button
+        self.shuffle_btn = ttk.Checkbutton(self.control_frame, image=icons["shuffle"], variable=self.shuffle_mode)
+        self.shuffle_btn.image = icons["shuffle"]
+        self.shuffle_btn.pack(side=tk.LEFT, padx=4)
+        
+        tk.Label(self.control_frame, text="Volume", font=font_primary, bg="#fafafa").pack(side=tk.LEFT, padx=8)
+        self.volume_slider = ttk.Scale(self.control_frame, from_=0, to=100, orient=tk.HORIZONTAL, command=self.change_volume)
+        self.volume_slider.set( settings.default_volume * 100 )
+        pygame.mixer.music.set_volume(settings.default_volume)
+        self.volume_slider.pack(side=tk.LEFT, padx=4)
+        self.now_playing_label = tk.Label(self.right_frame, text="Now Playing: None", font=("Helvetica Neue", 12), bg="#ffffff")
         self.now_playing_label.pack(pady=5)
-        self.slider = tk.Scale(self.right_frame, from_=0, to=100, orient=tk.HORIZONTAL, length=300, command=self.slider_seek, bg="#ffffff")
+        self.slider = ttk.Scale(self.right_frame, from_=0, to=100, orient=tk.HORIZONTAL, command=self.slider_seek)
         self.slider.pack(fill=tk.X, padx=5, pady=5)
+        self.slider_time_label = tk.Label(self.right_frame, text="00:00 / 00:00", font=("Helvetica Neue", 10), bg="#ffffff")
+        self.slider_time_label.pack(pady=(0, 10))
+        
         self.refresh_playlists()
         self.update_slider()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def update_label_info(self, label):
+        text = f"Version: {program_version} - Debug: {settings.debug_mode}"
+        label.config(text=text)
 
     def format_time(self, seconds):
         m = int(seconds) // 60
@@ -108,49 +146,37 @@ class App:
 
     def on_treeview_click(self, event):
         region = self.song_tree.identify("region", event.x, event.y)
-        if region == "cell":
-            col = self.song_tree.identify_column(event.x)
-            if col == "#3":
-                item = self.song_tree.identify_row(event.y)
-                if item:
-                    songs = self.playlists[self.selected_playlist]
-                    for s in songs:
-                        if s["id"] == item:
-                            self.play_song(s)
-                            return "break"
+        if region == "cell" and self.song_tree.identify_column(event.x) == "#3":
+            item = self.song_tree.identify_row(event.y)
+            if item:
+                for s in self.playlists[self.selected_playlist]:
+                    if s["id"] == item:
+                        self.play_song(s)
+                        return "break"
+    
+    def ensure_selection(self):
+        if self.playlist_listbox.size() > 0:
+            if not self.playlist_listbox.curselection():
+                self.playlist_listbox.selection_set(0)
+                self.on_playlist_select(None)
 
     def refresh_playlists(self):
         self.playlist_listbox.delete(0, tk.END)
         for plist in self.playlists:
             self.playlist_listbox.insert(tk.END, plist)
-        if self.playlist_listbox.size() > 0:
-            self.playlist_listbox.selection_set(0)
-            self.on_playlist_select(None)
-        else:
-            self.selected_playlist = None
-            self.song_tree.delete(*self.song_tree.get_children())
+        self.ensure_selection()
 
     def on_playlist_select(self, event):
-        selection = self.playlist_listbox.curselection()
-        if selection:
-            playlist_name = self.playlist_listbox.get(selection[0])
-            self.selected_playlist = playlist_name
-            self.refresh_songs()
-        else:
-            self.selected_playlist = None
-            self.song_tree.delete(*self.song_tree.get_children())
+        self.ensure_selection()
+        sel = self.playlist_listbox.curselection()
+        self.selected_playlist = self.playlist_listbox.get(sel[0])
+        self.refresh_songs()
 
     def refresh_songs(self):
         self.song_tree.delete(*self.song_tree.get_children())
-        if self.selected_playlist and self.selected_playlist in self.playlists:
-            songs = self.playlists[self.selected_playlist]
-            try:
-                songs_sorted = sorted(songs, key=lambda s: int(s["id"]))
-            except:
-                songs_sorted = songs
-            for song in songs_sorted:
-                tags = ("current",) if self.current_song and song["id"] == self.current_song["id"] else ()
-                self.song_tree.insert("", tk.END, iid=song["id"], values=(song["id"], song["name"], "▶"), tags=tags)
+        songs = self.playlists.get(self.selected_playlist, [])
+        for song in sorted(songs, key=lambda s: int(s["id"])):
+            self.song_tree.insert("", tk.END, iid=song["id"], values=(song["id"], song["name"], "▶"))
 
     def update_highlight(self):
         for item in self.song_tree.get_children():
@@ -159,32 +185,65 @@ class App:
             else:
                 self.song_tree.item(item, tags=())
 
+
     def add_playlist(self):
-        def save():
-            name = name_var.get().strip()
-            if name == "":
-                messagebox.showerror("Error", "Playlist name cannot be empty")
-                return
-            if name in self.playlists:
-                messagebox.showerror("Error", "Playlist already exists")
-                return
-            self.playlists[name] = []
-            self.refresh_playlists()
-            top.destroy()
         top = tk.Toplevel(self.root)
         top.title("Add Playlist")
-        tk.Label(top, text="Playlist Name", font=("Arial", 12)).pack(padx=5, pady=5)
         name_var = tk.StringVar()
-        tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
-        tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
+        ttk.Entry(top, textvariable=name_var).pack(padx=10, pady=10)
+        ttk.Button(top, text="Save", command=lambda: self._save_new_playlist(top, name_var)).pack(pady=5)
+        
+    def _save_new_playlist(self, top, var):
+        name = var.get().strip()
+        if not name or name in self.playlists: return
+        self.playlists[name] = []
+        self.refresh_playlists()
+        top.destroy()
 
     def remove_playlist(self):
-        selection = self.playlist_listbox.curselection()
-        if selection:
-            playlist_name = self.playlist_listbox.get(selection[0])
-            if messagebox.askyesno("Confirm", f"Delete playlist '{playlist_name}'?"):
-                del self.playlists[playlist_name]
-                self.refresh_playlists()
+        sel = self.playlist_listbox.curselection()
+        if not sel:
+            return
+
+        name = self.playlist_listbox.get(sel[0])
+        songs = self.playlists.get(name, [])
+
+        if not messagebox.askyesno("Confirm", f"Delete playlist '{name}'?"):
+            return
+
+        delete_files = False
+        if self.ask_on_delete.get():
+            delete_files = messagebox.askyesno("Files", "Delete all song files on disk?")
+            if messagebox.askyesno("Prompt", "Don't ask again?"):
+                settings.ask_on_delete = False
+                save_settings(settings)
+        else:
+            delete_files = True
+
+        for s in songs:
+            if self.current_song and self.current_song["file"] == s["file"]:
+                pygame.mixer.music.stop()
+                try:
+                    pygame.mixer.music.unload()
+                except:
+                    pass
+                self.current_song = None
+                self.now_playing_label.config(text="Now Playing: None")
+                self.slider.set(0)
+
+            if delete_files:
+                try:
+                    if os.path.exists(s["file"]):
+                        os.remove(s["file"])
+                        log_info(f"Deleted file {s['file']}")
+                except Exception as e:
+                    log_info(f"Error deleting file: {e}")
+
+        if name in self.playlists:
+            del self.playlists[name]
+
+        self.refresh_playlists()
+
 
     def rename_playlist(self):
         selection = self.playlist_listbox.curselection()
@@ -231,13 +290,11 @@ class App:
             if not os.path.exists(sound_dir):
                 os.makedirs(sound_dir)
             initial_files = set(os.listdir(sound_dir))
-            command = ["spotdl", url, "--output", os.path.join(sound_dir), "--bitrate", "192k"]
-            
-            
-            if debug_mode:
-                time = datetime.now().strftime("%H:%M:%S")
-                print(colored(f"{time}",'white'), colored(f"Dowloading Spotify song with command: {' '.join(command)}",'green'))
-                print(colored(f"{time}",'white'), colored(f"Sound directory: {sound_dir}",'green'))
+            command = settings.spotify_cmd.replace("{url}", url).replace("{out}", sound_dir)
+            print(command)
+            if settings.debug_mode:
+                log_debug(f"Dowloading Spotify song with command: {' '.join(command)}")
+                log_info(f"Sound directory: {sound_dir}")
 
             progress_bar.start()
             progress_label.config(text="Downloading...")
@@ -342,16 +399,11 @@ class App:
             if not os.path.exists(sound_dir):
                 os.makedirs(sound_dir)
             initial_files = set(os.listdir(sound_dir))
-            command = [
-                "yt-dlp", "-x", "--audio-format", "mp3", "--audio-quality", "0",
-                "-o", os.path.join(sound_dir, "%(title)s.%(ext)s"),
-                url
-            ]
-            
-            if debug_mode:
-                time = datetime.now().strftime("%H:%M:%S")
-                print(colored(f"{time}",'white'), colored(f"Dowloading YT song with command: {' '.join(command)}",'green'))
-                print(colored(f"{time}",'white'), colored(f"Sound directory: {sound_dir}",'green'))
+            command = settings.youtube_cmd.replace("{url}", url).replace("{out}", sound_dir)
+            print(command)
+            if settings.debug_mode:
+                log_debug(f"Dowloading YT song with command: {' '.join(command)}")
+                log_info(f"Sound directory: {sound_dir}")
 
                         
             progress_bar.start()
@@ -400,16 +452,57 @@ class App:
                                 command=lambda: threading.Thread(target=start_download).start(),
                                 bg="#cccccc")
         download_btn.pack(padx=5, pady=5)
-
+        
     def remove_song(self):
-        selected_item = self.song_tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "Select a song to remove")
+        sel = self.song_tree.selection()
+        if not sel:
             return
-        song_id = selected_item[0]
-        songs = self.playlists[self.selected_playlist]
-        self.playlists[self.selected_playlist] = [s for s in songs if s["id"] != song_id]
+
+        song_id = sel[0]
+        playlist = self.playlists.get(self.selected_playlist, [])
+        song = next((s for s in playlist if s["id"] == song_id), None)
+
+        if not song:
+            return
+
+        if self.current_song and self.current_song["id"] == song_id:
+            pygame.mixer.music.stop()
+            try:
+                pygame.mixer.music.unload()
+            except:
+                pass
+            self.current_song = None
+            self.now_playing_label.config(text="Now Playing: None")
+            self.slider.set(0)
+
+        delete_file = False
+
+        if self.ask_on_delete.get():
+            if not messagebox.askyesno("Confirm", f"Delete song '{song['name']}'?"):
+                return
+            delete_file = messagebox.askyesno("File", "Also delete the file from disk?")
+            if messagebox.askyesno("Prompt", "Don't ask again?"):
+                settings.ask_on_delete = False
+                save_settings(settings)
+        else:
+            delete_file = True
+
+        if delete_file:
+            try:
+                if os.path.exists(song["file"]):
+                    os.remove(song["file"])
+                    log_info(f"Deleted file: {song['file']}")
+            except Exception as e:
+                log_info(f"Error deleting file: {e}")
+
+        self.playlists[self.selected_playlist] = [s for s in playlist if s["id"] != song_id]
+
+        if self.song_tree.exists(song_id):
+            self.song_tree.delete(song_id)
+
         self.refresh_songs()
+
+
 
     def edit_song(self, event):
         selected_item = self.song_tree.selection()
@@ -472,7 +565,7 @@ class App:
             messagebox.showerror("Error", f"Cannot play song: {e}")
             return
         pygame.mixer.music.play()
-        self.start_time = time.time()
+        self.start_time = t.time()
         self.seek_offset = 0
         self.paused_position = None
         self.is_paused = False
@@ -491,14 +584,14 @@ class App:
             return
         if self.is_paused:
             pygame.mixer.music.unpause()
-            self.start_time = time.time()
+            self.start_time = t.time()
             self.seek_offset = self.paused_position
             self.paused_position = None
             self.is_paused = False
             self.play_pause_btn.config(text="Pause")
         else:
             pygame.mixer.music.pause()
-            self.paused_position = time.time() - self.start_time + self.seek_offset
+            self.paused_position = t.time() - self.start_time + self.seek_offset
             self.is_paused = True
             self.play_pause_btn.config(text="Play")
 
@@ -548,7 +641,7 @@ class App:
         try:
             pos = float(value)
             pygame.mixer.music.set_pos(pos)
-            self.start_time = time.time()
+            self.start_time = t.time()
             self.seek_offset = pos
             if self.is_paused:
                 self.paused_position = pos
@@ -560,26 +653,41 @@ class App:
         pygame.mixer.music.set_volume(vol)
 
     def update_slider(self):
-        if not self.selected_playlist:
-            self.root.after(200, self.update_slider)
-            return
         if self.current_song:
             if self.is_paused and self.paused_position is not None:
                 current_pos = self.paused_position
             elif not self.is_paused:
-                current_pos = time.time() - self.start_time + self.seek_offset
+                current_pos = t.time() - self.start_time + self.seek_offset
             else:
                 current_pos = 0
+
+            self.slider_updating = True
             self.slider.config(command="")
             self.slider.set(current_pos)
             self.slider.config(command=self.slider_seek)
-            if not pygame.mixer.music.get_busy() and current_pos >= self.current_song_length - 1:
+            self.slider_updating = False
+
+            total = self.current_song_length
+            elapsed = int(current_pos)
+            time_text = f"{self.format_time(elapsed)} / {self.format_time(total)}"
+            self.slider_time_label.config(text=time_text)
+
+            if not pygame.mixer.music.get_busy() and current_pos >= total - 1:
                 self.next_song()
-        self.root.after(200, self.update_slider)
+
+        
+    def open_settings(self):
+        SettingsWindow(
+            self.root,
+            settings,
+            on_close=lambda: save_settings(settings),
+            on_change=lambda s: self.update_label_info(self.label_info)
+        )
 
     def on_close(self):
         self.data["playlists"] = self.playlists
         save_config(self.data)
+        save_settings(settings)
         self.root.destroy()
 
 if __name__ == "__main__":
