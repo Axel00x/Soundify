@@ -17,6 +17,20 @@ Soundify is a Song player without any limitations or ads. Enjoy a seamless music
 - **Offline Availability**: Since everything works locally, you can listen offline.
 - **Ad-Free**: Enjoy your music without any interruptions from ads.
 
+## Version 0.3 Beta
+### Functions:
+- General settings
+- More customization and editing options for playlists, songs, and downloads
+- Changing style with icons and new style and design
+
+### Troubleshooting:
+- Support for downloads in different bitrates
+- Errors for selecting playlists
+- Errors for deleting songs (locally)
+
+### and more!!!
+Join the beta version [here](https://github.com/Axel00x/Soundify/releases/tag/0.3)
+
 ## Overview
 Soundify is designed to provide a user-friendly interface where you can manage your music library effortlessly. Whether you're creating a new playlist or downloading your favorite tracks from YouTube or Spotify, Soundify offers a streamlined and efficient experience.
 
