@@ -1,0 +1,3 @@
+Error log
+Version: 0.3 (Beta)
+14:25:47: Error setting volume: 'App' object has no attribute 'volume_label' | Error type: <class 'AttributeError'>

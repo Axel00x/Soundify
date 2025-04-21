@@ -48,7 +48,7 @@ class App:
         self.seek_offset = 0
         self.paused_position = None
         self.shuffle_mode = tk.BooleanVar(value=False)
-        self.ask_on_delete = tk.BooleanVar(value=settings.ask_on_delete)
+        #self.ask_on_delete = tk.BooleanVar(value=settings.ask_on_delete)
         self.root.configure(bg="#1DB954")
         font_primary = ("Helvetica Neue", 14)
         ttk.Style().configure("TButton", font=font_primary, relief="flat", borderwidth=0, padding=6)
@@ -97,6 +97,7 @@ class App:
         self.control_frame = tk.Frame(self.right_frame, bg="#fafafa")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
         res = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "res"))
+        global icons
         icons = {name: tk.PhotoImage(file=os.path.join(res, f"{name}.png")).subsample(1,1) for name in ("prev","play","pause","next","shuffle")}
         
         # Prev Button
@@ -124,11 +125,26 @@ class App:
         self.volume_slider.set( settings.default_volume * 100 )
         pygame.mixer.music.set_volume(settings.default_volume)
         self.volume_slider.pack(side=tk.LEFT, padx=4)
+        self.volume_label = tk.Label(self.control_frame, text=str(int(settings.default_volume*100))+"%", font=font_primary, bg="#fafafa")
+        self.volume_label.pack(side=tk.LEFT, padx=8)
+        
         self.now_playing_label = tk.Label(self.right_frame, text="Now Playing: None", font=("Helvetica Neue", 12), bg="#ffffff")
         self.now_playing_label.pack(pady=5)
-        self.slider = ttk.Scale(self.right_frame, from_=0, to=100, orient=tk.HORIZONTAL, command=self.slider_seek)
+        
+        # create the slider
+        self.slider = ttk.Scale(self.right_frame,
+                                from_=0,
+                                to=100,
+                                orient=tk.HORIZONTAL,
+                                command=self.slider_seek)
         self.slider.pack(fill=tk.X, padx=5, pady=5)
-        self.slider_time_label = tk.Label(self.right_frame, text="00:00 / 00:00", font=("Helvetica Neue", 10), bg="#ffffff")
+
+        # create the time label
+        self.slider_time_label = tk.Label(self.right_frame,
+                                          text="00:00 / 00:00",
+                                          font=("Helvetica Neue", 10),
+                                          bg="#ffffff")
+        
         self.slider_time_label.pack(pady=(0, 10))
         
         self.refresh_playlists()
@@ -212,7 +228,7 @@ class App:
             return
 
         delete_files = False
-        if self.ask_on_delete.get():
+        if settings.ask_on_delete:
             delete_files = messagebox.askyesno("Files", "Delete all song files on disk?")
             if messagebox.askyesno("Prompt", "Don't ask again?"):
                 settings.ask_on_delete = False
@@ -269,16 +285,22 @@ class App:
 
     def download_song_spotify(self):
         top = tk.Toplevel(self.root)
+        
+        style = ttk.Style()
+        style.configure('Custom.TButton', font=('Helvetica', 9), padding=(5, 1))
+
+        
         top.title("Download Song from Spotify")
+        top.resizable(False, False)
         tk.Label(top, text="Spotify URL:", font=("Arial", 12)).pack(padx=5, pady=5)
         url_var = tk.StringVar()
-        tk.Entry(top, textvariable=url_var, font=("Arial", 12), width=50).pack(padx=5, pady=5)
+        ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
         
         progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
         progress_label.pack(padx=5, pady=5)
         progress_bar = ttk.Progressbar(top, mode='indeterminate')
         progress_bar.pack(padx=5, pady=5, fill=tk.X)
-        cancel_btn = tk.Button(top, text="Cancel", font=("Arial", 12))
+        cancel_btn = ttk.Button(top, text="Cancel", style='Custom.TButton')
         cancel_btn.pack(padx=5, pady=5)
         
         def start_download():
@@ -286,14 +308,14 @@ class App:
             if url == "":
                 messagebox.showerror("Error", "Spotify URL cannot be empty")
                 return
-            sound_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Sound")
+            sound_dir = settings.default_download_path
             if not os.path.exists(sound_dir):
                 os.makedirs(sound_dir)
             initial_files = set(os.listdir(sound_dir))
             command = settings.spotify_cmd.replace("{url}", url).replace("{out}", sound_dir)
-            print(command)
+
             if settings.debug_mode:
-                log_debug(f"Dowloading Spotify song with command: {' '.join(command)}")
+                log_debug(f"Dowloading Spotify song with command: {command}")
                 log_info(f"Sound directory: {sound_dir}")
 
             progress_bar.start()
@@ -306,6 +328,8 @@ class App:
                 cancelled = True
                 process.terminate()
                 progress_label.config(text="Cancelling...")
+                if settings.debug_mode:
+                    log_info("Download cancelled")
 
             cancel_btn.config(command=cancel_download)
             stdout, stderr = process.communicate()
@@ -316,7 +340,10 @@ class App:
                 top.after(2000, top.destroy)
                 return
             if process.returncode != 0:
-                messagebox.showerror("Error", f"Spotify Download failed: {stderr}")
+                messagebox.showerror("Error", f"Song not found or playlist is private (check debug log)")
+                if settings.debug_mode:
+                    log_error(f"Spotify Download failed: {stderr}", stderr)
+                    log_info("No files downloaded or modified")
                 top.destroy()
                 return
             progress_label.config(text="Download complete.")
@@ -338,9 +365,9 @@ class App:
                 self.playlists[self.selected_playlist].append(new_song)
             self.refresh_songs()
         
-        download_btn = tk.Button(top, text="Download", font=("Arial", 12),
-                                command=lambda: threading.Thread(target=start_download).start(),
-                                bg="#cccccc")
+        download_btn = ttk.Button(top, text="Download",
+                                command=lambda: threading.Thread(target=start_download).start()
+                                )
         download_btn.pack(padx=5, pady=5)
 
     def import_song(self):
@@ -366,28 +393,38 @@ class App:
             self.playlists[self.selected_playlist].append(new_song)
             self.refresh_songs()
             top.destroy()
+            
         top = tk.Toplevel(self.root)
+        top.configure(padx=10, pady=10)
+        top.resizable(False, False)
         top.title("Import Song")
+        
         tk.Label(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
         id_var = tk.StringVar(value=default_id)
-        tk.Entry(top, textvariable=id_var, font=("Arial", 12)).pack(padx=5, pady=5)
+        ttk.Entry(top, textvariable=id_var, width=3, font=("Arial", 12)).pack(padx=5, pady=5)
         tk.Label(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
         name_var = tk.StringVar(value=default_name)
-        tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
-        tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
+        tk.Entry(top, textvariable=name_var, width=50, font=("Arial", 12)).pack(padx=5, pady=5)
+        ttk.Button(top, text="Save", command=save).pack(padx=5, pady=5)
 
     def download_song(self):
         top = tk.Toplevel(self.root)
+        
+        style = ttk.Style()
+        style.configure('Custom.TButton', font=('Helvetica', 9), padding=(5, 1))
+        
         top.title("Download Song from YouTube")
+        top.resizable(False, False)
+        
         tk.Label(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
         url_var = tk.StringVar()
-        tk.Entry(top, textvariable=url_var, font=("Arial", 12), width=50).pack(padx=5, pady=5)
+        ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
         
         progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
         progress_label.pack(padx=5, pady=5)
         progress_bar = ttk.Progressbar(top, mode='indeterminate')
         progress_bar.pack(padx=5, pady=5, fill=tk.X)
-        cancel_btn = tk.Button(top, text="Cancel", font=("Arial", 12))
+        cancel_btn = ttk.Button(top, text="Cancel", style='Custom.TButton')
         cancel_btn.pack(padx=5, pady=5)
         
         def start_download():
@@ -395,7 +432,7 @@ class App:
             if url == "":
                 messagebox.showerror("Error", "URL cannot be empty")
                 return
-            sound_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Sound")
+            sound_dir = settings.default_download_path
             if not os.path.exists(sound_dir):
                 os.makedirs(sound_dir)
             initial_files = set(os.listdir(sound_dir))
@@ -423,10 +460,14 @@ class App:
             
             if cancelled:
                 progress_label.config(text="Download cancelled.")
+                if settings.debug_mode:
+                    log_info("Download cancelled")
                 top.after(2000, top.destroy)
                 return
             if process.returncode != 0:
                 messagebox.showerror("Error", f"Download failed: {stderr}")
+                if settings.debug_mode:
+                    log_error(f"Download failed: {stderr}", stderr)
                 top.destroy()
                 return
             progress_label.config(text="Download complete.")
@@ -448,14 +489,16 @@ class App:
                 self.playlists[self.selected_playlist].append(new_song)
             self.refresh_songs()
         
-        download_btn = tk.Button(top, text="Download", font=("Arial", 12),
-                                command=lambda: threading.Thread(target=start_download).start(),
-                                bg="#cccccc")
+        download_btn = ttk.Button(top, text="Download",
+                                command=lambda: threading.Thread(target=start_download).start()
+                                )
         download_btn.pack(padx=5, pady=5)
         
     def remove_song(self):
         sel = self.song_tree.selection()
         if not sel:
+            if settings.debug_mode:
+                log_debug("No song is currently selected")
             return
 
         song_id = sel[0]
@@ -477,7 +520,7 @@ class App:
 
         delete_file = False
 
-        if self.ask_on_delete.get():
+        if settings.ask_on_delete:
             if not messagebox.askyesno("Confirm", f"Delete song '{song['name']}'?"):
                 return
             delete_file = messagebox.askyesno("File", "Also delete the file from disk?")
@@ -571,7 +614,7 @@ class App:
         self.is_paused = False
         self.play_pause_btn.config(text="Pause")
         self.slider.config(to=self.current_song_length)
-        self.now_playing_label.config(text=f"Now Playing: {song['name']}    Duration: {self.format_time(self.current_song_length)}")
+        self.now_playing_label.config(text=f"{song['name']}")
         songs = sorted(self.playlists[self.selected_playlist], key=lambda s: int(s["id"]))
         for index, s in enumerate(songs):
             if s["id"] == song["id"]:
@@ -581,6 +624,8 @@ class App:
 
     def toggle_pause(self):
         if not self.current_song:
+            if settings.debug_mode:
+                log_debug("No song is currently playing")
             return
         if self.is_paused:
             pygame.mixer.music.unpause()
@@ -588,12 +633,16 @@ class App:
             self.seek_offset = self.paused_position
             self.paused_position = None
             self.is_paused = False
-            self.play_pause_btn.config(text="Pause")
+            self.play_pause_btn.config(image=icons["pause"])
+            if settings.debug_mode:
+                log_debug("Song unpaused")
         else:
             pygame.mixer.music.pause()
             self.paused_position = t.time() - self.start_time + self.seek_offset
             self.is_paused = True
-            self.play_pause_btn.config(text="Play")
+            self.play_pause_btn.config(image=icons["play"])
+            if settings.debug_mode:
+                log_debug("Song paused")
 
     def next_song(self):
         if not self.selected_playlist:
@@ -651,37 +700,47 @@ class App:
     def change_volume(self, value):
         vol = float(value) / 100.0
         pygame.mixer.music.set_volume(vol)
-
+        try:
+            text = f"{int(vol * 100)}%"
+            self.volume_label.config(text=text)
+        except Exception as e:
+            if settings.debug_mode:
+                log_error(f"Error setting volume: {e}", e)
+                if type(e) == AttributeError:
+                    log_info("This is normal, the volume label is not initialized yet")
+            else:
+                pass
+            
     def update_slider(self):
         if self.current_song:
             if self.is_paused and self.paused_position is not None:
                 current_pos = self.paused_position
-            elif not self.is_paused:
-                current_pos = t.time() - self.start_time + self.seek_offset
             else:
-                current_pos = 0
+                current_pos = t.time() - self.start_time + self.seek_offset
 
             self.slider_updating = True
-            self.slider.config(command="")
+            self.slider.config(command=None)
             self.slider.set(current_pos)
             self.slider.config(command=self.slider_seek)
             self.slider_updating = False
 
             total = self.current_song_length
             elapsed = int(current_pos)
-            time_text = f"{self.format_time(elapsed)} / {self.format_time(total)}"
-            self.slider_time_label.config(text=time_text)
+            self.slider_time_label.config(
+                text=f"{self.format_time(elapsed)} / {self.format_time(total)}"
+            )
 
             if not pygame.mixer.music.get_busy() and current_pos >= total - 1:
                 self.next_song()
 
+        self.root.after(200, self.update_slider)
         
     def open_settings(self):
         SettingsWindow(
             self.root,
             settings,
             on_close=lambda: save_settings(settings),
-            on_change=lambda s: self.update_label_info(self.label_info)
+            on_change=self.update_label_info(self.label_info)
         )
 
     def on_close(self):

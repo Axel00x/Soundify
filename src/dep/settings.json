@@ -1,6 +1,6 @@
 {
-    "default_download_path": "Sound",
-    "debug_mode": false,
+    "default_download_path": "src\\Sound",
+    "debug_mode": true,
     "audio_output_device": "",
     "youtube_cmd": "yt-dlp -x --audio-format mp3 --audio-quality 0 -o \"{out}/%(title)s.%(ext)s\" {url}",
     "spotify_cmd": "spotdl {url} --output \"{out}\" --bitrate 192k",
