@@ -29,7 +29,7 @@ Soundify is a Song player without any limitations or ads. Enjoy a seamless music
 - Errors for deleting songs (locally)
 
 ### and more!!!
-Join the beta version [here](https://github.com/Axel00x/Soundify/releases/tag/0.3)
+Join the beta version [here](https://github.com/Axel00x/Soundify/releases/tag/v0.3-beta)
 
 ## Overview
 Soundify is designed to provide a user-friendly interface where you can manage your music library effortlessly. Whether you're creating a new playlist or downloading your favorite tracks from YouTube or Spotify, Soundify offers a streamlined and efficient experience.
