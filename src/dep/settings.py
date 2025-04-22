@@ -110,10 +110,13 @@ class SettingsWindow:
         self.settings = settings
         self.on_close = on_close
         self.on_change = on_change
+        
         self.win = tk.Toplevel(master)
+        self.win.attributes('-topmost', True)
         self.win.geometry("600x300")
         self.win.resizable(False, False)
         self.win.title("Application Settings")
+       
         self.frame = ttk.Frame(self.win, padding=10)
         self.frame.pack(fill=tk.BOTH, expand=True)
         
@@ -152,7 +155,9 @@ class SettingsWindow:
         ttk.Entry(self.frame, textvariable=self.volume_var, width=3).grid(row=5, column=1, pady=5)
         ttk.Label(self.frame, text="%").grid(row=5, column=2, sticky="w", pady=5)
         
-        ttk.Button(self.frame, text="Save", command=self.save).grid(row=7, column=1, columnspan=3, pady=10)
+        ttk.Button(self.frame, text="Save", command=self.save).grid(row=7, column=0, columnspan=3, pady=10)
+        ttk.Button(self.frame, text="Reset to default", command=self.reset, style='Custom.TButton').grid(row=7, column=3, columnspan=3, pady=10)
+        
     def browse_path(self):
         path = filedialog.askdirectory()
         if path: self.path_var.set(path)
@@ -175,3 +180,28 @@ class SettingsWindow:
         messagebox.showinfo("Settings", "Settings saved.")
         
         self.win.destroy()
+        
+    def reset(self):
+        settings.default_download_path = 'src\\Sound'
+        settings.debug_mode = False
+        settings.ask_on_delete = True
+        #settings.audio_output_device = self.audio_var.get()
+        settings.youtube_cmd = "yt-dlp -x --audio-format mp3 --audio-quality 0 -o \"{out}/%(title)s.%(ext)s\" {url}"
+        settings.spotify_cmd = "spotdl {url} --output \"{out}\" --bitrate 192k"
+        settings.default_volume = 0.5
+        
+        self.path_var.set(settings.default_download_path)
+        self.debug_var.set(settings.debug_mode)
+        self.ask_var.set(settings.ask_on_delete)
+        #self.audio_var.set(settings.audio_output_device)
+        self.yt_cmd.delete("1.0", "end")
+        self.yt_cmd.insert("1.0", settings.youtube_cmd)
+        self.sp_cmd.delete("1.0", "end")
+        self.sp_cmd.insert("1.0", settings.spotify_cmd)
+        self.volume_var.set(int(settings.default_volume*100))
+    
+        
+        if self.on_change: self.on_change(settings)
+        if self.on_close: self.on_close()
+        
+        messagebox.showinfo("Settings", "Settings restored to default.")

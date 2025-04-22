@@ -4,4 +4,4 @@ errors:
 - when changing playlist selected, the current song playing selector stop working
 - must add "ask every time" & default volume in settings ✅
 - add volume indicator (0-100%) ✅
-- add "reset to default" button in settings
+- add "reset to default" button in settings ✅
