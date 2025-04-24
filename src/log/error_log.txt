@@ -1,2 +1,2 @@
 Error log
-Version: 0.3 (Beta)
+Version: 0.3

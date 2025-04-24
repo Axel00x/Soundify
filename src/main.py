@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pygame
 import os
+import sys
 import random
 import time as t
 import subprocess
@@ -10,13 +11,24 @@ import threading
 from termcolor import colored
 from datetime import datetime
 
-
 from dep.config import *
 from dep.settings import *
 
 pygame.mixer.init()
 
-debug_mode = load_settings()
+def resource_path(relative):
+    """
+    Get absolute path to resource, works for dev (project root)
+    and for PyInstaller one-file bundles.
+    """
+    if getattr(sys, 'frozen', False):
+        # PyInstaller “onefile” mode: files unpacked to _MEIPASS
+        base = sys._MEIPASS
+    else:
+        # Dev mode: __file__ is in src/, so go up one level to project root
+        base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    return os.path.join(base, relative)
+
 
 class Song:
     def __init__(self, song_id, name, file):
@@ -96,9 +108,12 @@ class App:
         ttk.Button(self.right_frame, text="Remove Song", command=self.remove_song).pack(fill=tk.X, padx=5, pady=2)
         self.control_frame = tk.Frame(self.right_frame, bg="#fafafa")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
-        res = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "res"))
+        
+        res = resource_path("res")
         global icons
         icons = {name: tk.PhotoImage(file=os.path.join(res, f"{name}.png")).subsample(1,1) for name in ("prev","play","pause","next","shuffle")}
+        if settings.debug_mode: 
+            for name in ("prev","play","pause","next","shuffle"): log_info("Image loaded: " + os.path.join(res, f"{name}.png")) 
         
         # Prev Button
         self.prev_btn = ttk.Button(self.control_frame, image=icons["prev"], command=self.previous_song)

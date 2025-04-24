@@ -1,0 +1,21 @@
+v 0.2
+add command:  yt-dlp -x --audio-format mp3 --audio-quality 0
+modify spotdl command: "--bitrate 192k"
+
+
+v 0.3 Beta
+new design
+### Functions:
+- General settings
+- More customization and editing options for playlists, songs, and downloads
+- Changing style with icons and new style and design
+
+### Troubleshooting:
+- Support for downloads in different bitrates
+- Errors for selecting playlists
+- Errors for deleting songs (locally)
+
+v 0.3 Stable
+- add "ask every time" & default volume in settings ✅
+- add volume indicator (0-100%) ✅
+- add "reset to default" button in settings ✅

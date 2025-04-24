@@ -7,7 +7,7 @@ from termcolor import colored
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-program_version = '0.3 (Beta)'
+program_version = '0.3'
 
 _settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
 
@@ -133,6 +133,7 @@ class SettingsWindow:
         # Debug mode checkbox     
         self.debug_var = tk.BooleanVar(value=settings.debug_mode)
         ttk.Checkbutton(self.frame, text="Enable Debug Mode", variable=self.debug_var).grid(row=1, column=0, columnspan=3, sticky="w", pady=5)
+        tk.Label(self.frame, text="Make sure to have the \"Soundify_debug.exe\" installed.").grid(row=1, column=3, columnspan=2, sticky="w", pady=5)
         
         # Ask everytime checkbox     
         self.ask_var = tk.BooleanVar(value=settings.ask_on_delete)
