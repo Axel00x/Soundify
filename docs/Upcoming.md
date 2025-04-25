@@ -1,11 +1,8 @@
-# Coming soon (v0.3)
+# Coming soon (v0.4)
 ### Functions:
-- General settings
-- More customization and editing options for playlists, songs, and downloads
-- Changing style with icons and new style and design
-- `.exe` file !!!
+- Side card to show song info (cover, duration, artists and other metadata)
+- Ability to change the theme of the app (dark, light and default)
 
 ### Troubleshooting:
-- Support for downloads in different bitrates
-- Errors for selecting playlists
-- Errors for deleting songs (locally)
+- Highlighter error for current songs.
+- General performance improvements
