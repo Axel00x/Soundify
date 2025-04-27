@@ -3,5 +3,8 @@ pyinstaller --onefile --noconsole --clean --name Soundify --add-data "src/dep;de
 debug:
 pyinstaller --onefile --clean --name Soundify_debug --add-data "src/dep;dep" --add-data "src/Sound;Sound" --add-data "src/log;log" --add-data "res;res" src/main.py
 
+features:
+- finish Info card
+
 errors:
 - when changing playlist selected, the current song playing selector stop working (next patch)

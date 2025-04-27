@@ -1,14 +1,23 @@
-import os
-import json
+import os, json
 
-CONFIG_FILE = "config.json"
-
-def save_config(data):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(data, f)
+_config_path = os.path.join(os.path.dirname(__file__), 'config.json')
 
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
+    if not os.path.exists(_config_path):
+        default = {"playlists": {}}
+        with open(_config_path, 'w') as f:
+            json.dump(default, f, indent=4)
+        return default
+
+    try:
+        with open(_config_path) as f:
             return json.load(f)
-    return {"playlists": {}}
+    except json.JSONDecodeError:
+        default = {"playlists": {}}
+        with open(_config_path, 'w') as f:
+            json.dump(default, f, indent=4)
+        return default
+
+def save_config(data):
+    with open(_config_path, 'w') as f:
+        json.dump(data, f, indent=4)

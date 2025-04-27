@@ -7,7 +7,11 @@ import random
 import time as t
 import subprocess
 import threading
+import re
 
+from mutagen import File as MutagenFile
+from mutagen.id3 import ID3, APIC, USLT
+from PIL import Image, ImageTk
 from termcolor import colored
 from datetime import datetime
 
@@ -15,6 +19,34 @@ from dep.config import *
 from dep.settings import *
 
 pygame.mixer.init()
+
+def extract_metadata(file_path):
+    """
+    Read ID3 tags (title, artist, album, duration, cover, lyrics)
+    Returns a metadata dict (might be empty).
+    """
+    meta = {}
+    try:
+        audio = MutagenFile(file_path, easy=True)
+        tags  = audio.tags or {}
+        meta["title"]    = tags.get("title",   [os.path.basename(file_path)])[0]
+        meta["artist"]   = tags.get("artist",  ["Unknown Artist"])[0]
+        meta["album"]    = tags.get("album",   [""])[0]
+        meta["duration"] = int(audio.info.length) if audio.info else 0
+
+        # now load ID3 frames for cover & lyrics
+        id3 = ID3(file_path)
+        pic = id3.getall("APIC")
+        if pic:
+            meta["cover_data"] = pic[0].data
+        usl = id3.getall("USLT")
+        if usl:
+            meta["lyrics"] = usl[0].text
+    except Exception:
+        # leave meta empty if anything fails
+        pass
+
+    return meta
 
 def resource_path(relative):
     """
@@ -46,10 +78,19 @@ class App:
     def __init__(self, root):
         self.root = root
         self.root.title(f"Soundify Music Player (v{program_version})")
+        self.root.bind('<FocusIn>', lambda e: self._on_app_focus())
         self.data = load_config()
         if "playlists" not in self.data:
             self.data["playlists"] = {}
         self.playlists = self.data["playlists"]
+        
+        for plist in self.playlists.values():
+            for song in plist:
+                # only if we haven't already (e.g. from a live download)
+                if not isinstance(song, dict) or not song.get("metadata"):
+                    song["metadata"] = extract_metadata(song["file"])
+
+        
         self.selected_playlist = None
         self.current_song = None
         self.current_song_length = 0
@@ -68,10 +109,17 @@ class App:
         self.title_label.pack(fill=tk.X, pady=10)
         self.main_frame = tk.Frame(self.root, bg="#ffffff")
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.left_frame = tk.Frame(self.main_frame, bg="#f7f7f7")
+        self.left_frame = tk.Frame(self.main_frame, bg="#f0f0f0", width=150)
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0,10))
-        self.right_frame = tk.Frame(self.main_frame, bg="#ffffff")
-        self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self.center_frame = tk.Frame(self.main_frame, bg="#ffffff")
+        self.center_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.meta_frame = tk.Frame(self.main_frame, bg="#282828", width=290)
+        self.meta_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(10,0))
+
+        
+        #self.right_frame = tk.Frame(self.main_frame, bg="#ffffff")
+        #self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self.playlist_listbox = tk.Listbox(self.left_frame, font=font_primary, bd=0, highlightthickness=0, selectbackground="#1DB954", fg="#333")
         self.playlist_listbox.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.playlist_listbox.bind("<<ListboxSelect>>", self.on_playlist_select)
@@ -89,7 +137,7 @@ class App:
         style = ttk.Style()
         style.configure("Treeview", font=("Helvetica Neue", 12), rowheight=28)
         style.configure("Treeview.Heading", font=("Helvetica Neue", 13, "bold"))
-        self.song_tree = ttk.Treeview(self.right_frame, columns=("ID", "Name", "Play"), show="headings", selectmode="browse")
+        self.song_tree = ttk.Treeview(self.center_frame, columns=("ID", "Name", "Play"), show="headings", selectmode="browse")
         self.song_tree.heading("ID", text="ID")
         self.song_tree.heading("Name", text="Name")
         self.song_tree.heading("Play", text="")
@@ -100,13 +148,13 @@ class App:
         self.song_tree.bind("<Button-1>", self.on_treeview_click)
         self.song_tree.tag_configure("current", background="#1DB954", foreground="white")
         
-        self.import_frame = tk.Frame(self.right_frame, bg="#ffffff")
+        self.import_frame = tk.Frame(self.center_frame, bg="#ffffff")
         self.import_frame.pack(fill=tk.X, padx=5, pady=2)
         ttk.Button(self.import_frame, text="Import Song", command=self.import_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         ttk.Button(self.import_frame, text="Download YouTube", command=self.download_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         ttk.Button(self.import_frame, text="Download Spotify", command=self.download_song_spotify).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        ttk.Button(self.right_frame, text="Remove Song", command=self.remove_song).pack(fill=tk.X, padx=5, pady=2)
-        self.control_frame = tk.Frame(self.right_frame, bg="#fafafa")
+        ttk.Button(self.center_frame, text="Remove Song", command=self.remove_song).pack(fill=tk.X, padx=5, pady=2)
+        self.control_frame = tk.Frame(self.center_frame, bg="#fafafa")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
         
         res = resource_path("res")
@@ -143,11 +191,11 @@ class App:
         self.volume_label = tk.Label(self.control_frame, text=str(int(settings.default_volume*100))+"%", font=font_primary, bg="#fafafa")
         self.volume_label.pack(side=tk.LEFT, padx=8)
         
-        self.now_playing_label = tk.Label(self.right_frame, text="Now Playing: None", font=("Helvetica Neue", 12), bg="#ffffff")
+        self.now_playing_label = tk.Label(self.center_frame, text="Now Playing: None", font=("Helvetica Neue", 12), bg="#ffffff")
         self.now_playing_label.pack(pady=5)
         
         # create the slider
-        self.slider = ttk.Scale(self.right_frame,
+        self.slider = ttk.Scale(self.center_frame,
                                 from_=0,
                                 to=100,
                                 orient=tk.HORIZONTAL,
@@ -155,7 +203,7 @@ class App:
         self.slider.pack(fill=tk.X, padx=5, pady=5)
 
         # create the time label
-        self.slider_time_label = tk.Label(self.right_frame,
+        self.slider_time_label = tk.Label(self.center_frame,
                                           text="00:00 / 00:00",
                                           font=("Helvetica Neue", 10),
                                           bg="#ffffff")
@@ -165,6 +213,13 @@ class App:
         self.refresh_playlists()
         self.update_slider()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def _on_app_focus(self):
+        # if something’s playing *and* it has metadata, re-show its card
+        if self.current_song and isinstance(self.current_song, dict) and self.current_song.get("metadata"):
+            self.update_highlight()
+            self.show_metadata_card(self.current_song)
+
 
     def update_label_info(self, label):
         text = f"Version: {program_version} - Debug: {settings.debug_mode}"
@@ -200,7 +255,17 @@ class App:
     def on_playlist_select(self, event):
         self.ensure_selection()
         sel = self.playlist_listbox.curselection()
-        self.selected_playlist = self.playlist_listbox.get(sel[0])
+        self.selected_playlist = self.playlist_listbox.get(sel[0])        
+        self.refresh_songs()
+        if self.current_song and any(s["id"] == self.current_song["id"]
+                                      for s in self.playlists[self.selected_playlist]):
+            sid = self.current_song["id"]
+            self.song_tree.selection_set(sid)
+            self.update_highlight()
+            self.show_metadata_card(self.current_song)
+        else:
+            for w in self.meta_frame.winfo_children(): w.destroy()
+        
         self.refresh_songs()
 
     def refresh_songs(self):
@@ -320,71 +385,218 @@ class App:
         
         def start_download():
             url = url_var.get().strip()
-            if url == "":
+            if not url:
                 messagebox.showerror("Error", "Spotify URL cannot be empty")
                 return
-            sound_dir = settings.default_download_path
-            if not os.path.exists(sound_dir):
-                os.makedirs(sound_dir)
-            initial_files = set(os.listdir(sound_dir))
-            command = settings.spotify_cmd.replace("{url}", url).replace("{out}", sound_dir)
 
+            sound_dir = settings.default_download_path
+            os.makedirs(sound_dir, exist_ok=True)
+            start_ts = t.time()
+
+            command = settings.spotify_cmd.replace("{url}", url).replace("{out}", sound_dir)
             if settings.debug_mode:
-                log_debug(f"Dowloading Spotify song with command: {command}")
-                log_info(f"Sound directory: {sound_dir}")
+                log_debug(f"Downloading Spotify song with command: {command}")
 
             progress_bar.start()
             progress_label.config(text="Downloading...")
-            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-            cancelled = False
-
-            def cancel_download():
-                nonlocal cancelled
-                cancelled = True
-                process.terminate()
-                progress_label.config(text="Cancelling...")
-                if settings.debug_mode:
-                    log_info("Download cancelled")
-
-            cancel_btn.config(command=cancel_download)
+            process = subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True
+            )
             stdout, stderr = process.communicate()
             progress_bar.stop()
-            
-            if cancelled:
-                progress_label.config(text="Download cancelled.")
-                top.after(2000, top.destroy)
-                return
+
             if process.returncode != 0:
-                messagebox.showerror("Error", f"Song not found or playlist is private (check debug log)")
+                messagebox.showerror("Error", "Song not found or private playlist")
                 if settings.debug_mode:
-                    log_error(f"Spotify Download failed: {stderr}", stderr)
-                    log_info("No files downloaded or modified")
+                    log_info(f"spotdl stderr:\n{stderr}")
                 top.destroy()
                 return
-            progress_label.config(text="Download complete.")
-            top.after(1000, top.destroy)
-            
-            t.sleep(1)
-            new_files = set(os.listdir(sound_dir)) - initial_files
-            
-            if self.selected_playlist is None:
-                messagebox.showwarning("Warning", "No playlist selected. Downloaded songs will not be added automatically.")
-                return
-            
-            for filename in new_files:
-                if not filename.lower().endswith(('.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg')):
+
+            top.destroy()
+
+            audio_exts = ('.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg')
+            new_files = []
+            for fn in os.listdir(sound_dir):
+                if not fn.lower().endswith(audio_exts):
                     continue
-                file_path = os.path.join(sound_dir, filename)
+                full_path = os.path.join(sound_dir, fn)
+                try:
+                    mtime = os.path.getmtime(full_path)
+                except OSError:
+                    continue
+                if mtime >= start_ts:
+                    new_files.append(fn)
+
+            if settings.debug_mode:
+                log_info(f"Files in dir after download: {os.listdir(sound_dir)}")
+                log_info(f"New files by timestamp: {new_files}")
+
+            if not new_files:
+                messagebox.showwarning("Warning", "No new audio files found. \n Song is not available or it's caused by a yt-dlp error. \n Check error_log.txt")
+                
+                if settings.debug_mode:
+                    log_info("No new files found. Song is not available.")
+                    log_debug(f"Use command: - {command} - on your terminal to check for errors.")
+                    
+                    log_error(f"spotdl stderr:\n{stdout}", stdout)
+                    
+                if not messagebox.askyesno("Try with YT", "Do you want to try with YouTube? (Recommended)"):
+                    top.destroy()
+                    return
+                else:
+                    m = re.search(r'https://[^\s]*youtube[^\s]*', stdout)
+                    if m:
+                        self.download_song(link=m.group(0))
+                        
+                return
+
+            if self.selected_playlist is None:
+                messagebox.showwarning("Warning", "Select a playlist first")
+                if settings.debug_mode:
+                    log_info("No playlist selected")
+                return
+
+            from mutagen import File as MutagenFile
+            from mutagen.id3 import ID3
+
+            for fn in sorted(new_files):
+                file_path = os.path.join(sound_dir, fn)
+
+                audio = MutagenFile(file_path, easy=True)
+                tags = audio.tags or {}
+                title    = tags.get('title',   [fn])[0]
+                artist   = tags.get('artist',  ['Unknown Artist'])[0]
+                album    = tags.get('album',   [''])[0]
+                duration = int(audio.info.length) if audio.info else 0
+
+                cover_data = None
+                lyrics     = None
+                try:
+                    id3 = ID3(file_path)
+                    pics = id3.getall('APIC')
+                    if pics:
+                        cover_data = pics[0].data
+                    usl = id3.getall('USLT')
+                    if usl:
+                        lyrics = usl[0].text
+                except:
+                    pass
+
                 default_id = str(len(self.playlists[self.selected_playlist]) + 1)
-                new_song = {"id": default_id, "name": filename, "file": file_path}
+                new_song = {
+                    "id": default_id,
+                    "name": title,
+                    "file": file_path,
+                    "metadata": {
+                        "title": title,
+                        "artist": artist,
+                        "album": album,
+                        "duration": duration,
+                        "cover_data": cover_data,
+                        "lyrics": lyrics
+                    }
+                }
                 self.playlists[self.selected_playlist].append(new_song)
+
             self.refresh_songs()
-        
-        download_btn = ttk.Button(top, text="Download",
-                                command=lambda: threading.Thread(target=start_download).start()
-                                )
+
+            if self.current_song and self.current_song in self.playlists.get(self.selected_playlist, []):
+                sid = self.current_song["id"]
+                self.song_tree.selection_set(sid)
+                self.update_highlight()
+                self.show_metadata_card(self.current_song)
+
+        download_btn = ttk.Button(
+            top, text="Download",
+            command=lambda: threading.Thread(target=start_download).start()
+        )
         download_btn.pack(padx=5, pady=5)
 
+    def show_metadata_card(self, song):
+        # only show if we have metadata
+        meta = song.get("metadata") or {}
+        if isinstance(song, dict):
+            meta = song.get("metadata", {}) or {}
+        if not meta:
+            return
+
+        for w in self.meta_frame.winfo_children():
+            w.destroy()
+
+        self.meta_frame.config(
+            bg="#1e1e1e",
+            bd=0,
+            highlightthickness=0
+        )
+        self.meta_frame.pack_propagate(False)
+        self.meta_frame.config(width=290, height=400)
+
+        # --- COVER ART ---
+        if meta.get("cover_data"):
+            from io import BytesIO
+            from PIL import Image, ImageTk
+            bio = BytesIO(meta["cover_data"])
+            img = Image.open(bio).resize((200,200))
+            photo = ImageTk.PhotoImage(img)
+            lbl = tk.Label(self.meta_frame, image=photo, bg="#1e1e1e")
+            lbl.image = photo
+            lbl.pack(pady=(10,5))
+
+        # FONT
+        title_font   = ("Yu Gothic UI Semibold", 16)
+        artist_font  = ("Yu Gothic UI", 10)
+        info_color   = "#d1d1d1"
+
+        # --- TITLE / ARTIST ---
+        tk.Label(self.meta_frame, text=meta["title"],
+                font=title_font, fg="white", bg="#1e1e1e",
+                wraplength=200, justify="center").pack(pady=(0,5), padx=10)
+        tk.Label(self.meta_frame, text=meta["artist"].replace("/", ", "),
+                font=artist_font, fg=info_color, bg="#1e1e1e",
+                wraplength=200, justify="center").pack(pady=(0,10), padx=10)
+
+        # --- DURATION & ALBUM ---
+        info_str = f"{self.format_time(meta['duration'])}"
+        if meta.get("album"):
+            info_str += f"   •   {meta['album']}"
+        tk.Label(self.meta_frame, text=info_str,
+                font=artist_font, fg=info_color, bg="#1e1e1e").pack(pady=(0,10))
+
+        # --- LYRICS SCROLLABLE ---
+        if meta.get("lyrics"):
+            lyrics_frame = tk.Frame(self.meta_frame, bg="#1e1e1e")
+            lyrics_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0,10))
+            scrollbar = ttk.Scrollbar(lyrics_frame, orient=tk.VERTICAL)
+            text_box  = tk.Text(
+                lyrics_frame, wrap=tk.WORD, bg="#1e1e1e", fg="white",
+                font=("Noto Sans Georgian Bold", 9), bd=0, yscrollcommand=scrollbar.set
+            )
+            scrollbar.config(command=text_box.yview)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            
+            lyrics_text = meta["lyrics"]
+
+            lyrics_txt = re.search(r'Lyrics[:\s]*(.*)', lyrics_text, re.DOTALL)
+            if lyrics_txt:
+                lyrics = lyrics_txt.group(1).strip()
+            else:
+                lyrics = ""
+                print("Warning: nessuna corrispondenza trovata per 'Lyrics'.")
+
+            lyrics = re.sub(r'[\"“”]([^\"“”]*?)[\"“”]', r'(\1)', lyrics)
+
+            
+            text_box.config(state=tk.NORMAL)
+            text_box.delete("1.0", tk.END)
+            text_box.insert("1.0", lyrics)
+            text_box.config(state=tk.DISABLED)
+
+        else:
+            tk.Label(self.meta_frame, text="No lyrics available", font=("Noto Sans Georgian Bold", 11), fg="gray",
+                    bg="#1e1e1e").pack(expand=True)
+
+    
     def import_song(self):
         if not self.selected_playlist:
             messagebox.showerror("Error", "Select a playlist first")
@@ -422,7 +634,7 @@ class App:
         tk.Entry(top, textvariable=name_var, width=50, font=("Arial", 12)).pack(padx=5, pady=5)
         ttk.Button(top, text="Save", command=save).pack(padx=5, pady=5)
 
-    def download_song(self):
+    def download_song(self, link=None):
         top = tk.Toplevel(self.root)
         
         style = ttk.Style()
@@ -432,7 +644,10 @@ class App:
         top.resizable(False, False)
         
         tk.Label(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
-        url_var = tk.StringVar()
+        if link is None:
+            url_var = tk.StringVar()
+        else:
+            url_var = tk.StringVar(value=link)
         ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
         
         progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
@@ -454,7 +669,7 @@ class App:
             command = settings.youtube_cmd.replace("{url}", url).replace("{out}", sound_dir)
             print(command)
             if settings.debug_mode:
-                log_debug(f"Dowloading YT song with command: {' '.join(command)}")
+                log_debug(f"Dowloading YT song with command: {command}")
                 log_info(f"Sound directory: {sound_dir}")
 
                         
@@ -503,6 +718,12 @@ class App:
                 new_song = {"id": default_id, "name": filename, "file": file_path}
                 self.playlists[self.selected_playlist].append(new_song)
             self.refresh_songs()
+        
+            if self.current_song and self.current_song in self.playlists.get(self.selected_playlist, []):
+                sid = self.current_song["id"]
+                self.song_tree.selection_set(sid)
+                self.update_highlight()
+                self.show_metadata_card(self.current_song)
         
         download_btn = ttk.Button(top, text="Download",
                                 command=lambda: threading.Thread(target=start_download).start()
@@ -605,6 +826,8 @@ class App:
             selected_item = self.song_tree.selection()
             if not selected_item:
                 messagebox.showerror("Error", "Select a song to play")
+                if settings.debug_mode:
+                    log_debug("No song selected")
                 return
             song_id = selected_item[0]
             songs = self.playlists[self.selected_playlist]
@@ -619,10 +842,16 @@ class App:
             pygame.mixer.music.load(song["file"])
             sound_obj = pygame.mixer.Sound(song["file"])
             self.current_song_length = sound_obj.get_length()
+            if settings.debug_mode:
+                log_info(f"Loaded song: {song['file']}")
         except Exception as e:
             messagebox.showerror("Error", f"Cannot play song: {e}")
+            if settings.debug_mode:
+                log_error(f"Error loading song: {e}", e)
             return
         pygame.mixer.music.play()
+        if settings.debug_mode:
+            log_info(f"Playing song: {song['file']}")
         self.start_time = t.time()
         self.seek_offset = 0
         self.paused_position = None
@@ -635,7 +864,24 @@ class App:
             if s["id"] == song["id"]:
                 self.current_song_index = index
                 break
-        self.update_highlight()
+        
+        try:
+            self.update_highlight()
+            if settings.debug_mode:
+                log_info(f"Highlight updated for song: {song['name']}")
+        except Exception as e:
+            if settings.debug_mode:
+                log_error(f"Error updating highlight: {e}", e)
+            pass
+            
+        try:
+            self.show_metadata_card(song)
+            if settings.debug_mode:
+                log_info(f"Metadata card shown for song: {song['name']}")
+        except Exception as e:
+            if settings.debug_mode:
+                log_error(f"Error showing metadata card: {e}", e)
+            pass
 
     def toggle_pause(self):
         if not self.current_song:
@@ -739,7 +985,7 @@ class App:
             self.slider.config(command=self.slider_seek)
             self.slider_updating = False
 
-            total = self.current_song_length
+            total = self.current_song_length + 1
             elapsed = int(current_pos)
             self.slider_time_label.config(
                 text=f"{self.format_time(elapsed)} / {self.format_time(total)}"
@@ -759,8 +1005,21 @@ class App:
         )
 
     def on_close(self):
-        self.data["playlists"] = self.playlists
-        save_config(self.data)
+        # prepara una copia pulita di self.playlists
+        clean_playlists = {}
+        for pname, songs in self.playlists.items():
+            clean_list = []
+            for s in songs:
+                clean_list.append({
+                    "id":   s["id"],
+                    "name": s["name"],
+                    "file": s["file"]
+                })
+            clean_playlists[pname] = clean_list
+
+        data_to_save = { "playlists": clean_playlists }
+
+        save_config(data_to_save)
         save_settings(settings)
         self.root.destroy()
 

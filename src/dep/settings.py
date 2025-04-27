@@ -7,7 +7,7 @@ from termcolor import colored
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-program_version = '0.3'
+program_version = '0.4 (Beta)'
 
 _settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
 
