@@ -23,6 +23,9 @@ from ui.widget.listBox import RoundedListbox
 
 pygame.mixer.init()
 
+ctk.set_appearance_mode("dark")
+ctk.set_widget_scaling(1.1)
+
 def extract_metadata(file_path):
     """
     Read ID3 tags (title, artist, album, duration, cover, lyrics)
