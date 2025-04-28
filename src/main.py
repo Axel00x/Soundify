@@ -1,8 +1,10 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import customtkinter as ctk
+from PIL import Image
+
 import pygame
-import os
-import sys
+import os, sys
 import random
 import time as t
 import subprocess
@@ -11,12 +13,13 @@ import re
 
 from mutagen import File as MutagenFile
 from mutagen.id3 import ID3, APIC, USLT
-from PIL import Image, ImageTk
 from termcolor import colored
 from datetime import datetime
 
 from dep.config import *
 from dep.settings import *
+
+from ui.widget.listBox import RoundedListbox
 
 pygame.mixer.init()
 
@@ -43,7 +46,6 @@ def extract_metadata(file_path):
         if usl:
             meta["lyrics"] = usl[0].text
     except Exception:
-        # leave meta empty if anything fails
         pass
 
     return meta
@@ -86,7 +88,6 @@ class App:
         
         for plist in self.playlists.values():
             for song in plist:
-                # only if we haven't already (e.g. from a live download)
                 if not isinstance(song, dict) or not song.get("metadata"):
                     song["metadata"] = extract_metadata(song["file"])
 
@@ -102,42 +103,79 @@ class App:
         self.paused_position = None
         self.shuffle_mode = tk.BooleanVar(value=False)
         #self.ask_on_delete = tk.BooleanVar(value=settings.ask_on_delete)
-        self.root.configure(bg="#1DB954")
+        self.root.configure(fg_color="#000000")
         font_primary = ("Helvetica Neue", 14)
-        ttk.Style().configure("TButton", font=font_primary, relief="flat", borderwidth=0, padding=6)
-        self.title_label = tk.Label(self.root, text="Soundify Music Player", font=("Helvetica Neue", 24, "bold"), bg="#1DB954", fg="white")
+        self.title_label = ctk.CTkLabel(self.root, text="Soundify Music Player", font=("Helvetica Neue", 24, "bold"), text_color="#ffffff", fg_color="transparent")
         self.title_label.pack(fill=tk.X, pady=10)
-        self.main_frame = tk.Frame(self.root, bg="#ffffff")
+        self.main_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.left_frame = tk.Frame(self.main_frame, bg="#f0f0f0", width=150)
+        self.left_frame = ctk.CTkFrame(self.main_frame, fg_color="#202020", width=150)
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0,10))
-        self.center_frame = tk.Frame(self.main_frame, bg="#ffffff")
+        self.center_frame = ctk.CTkFrame(self.main_frame, fg_color="#171717")
         self.center_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        self.meta_frame = tk.Frame(self.main_frame, bg="#282828", width=290)
+        self.meta_frame = ctk.CTkFrame(self.main_frame, fg_color="#282828", width=290)
         self.meta_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(10,0))
 
         
-        #self.right_frame = tk.Frame(self.main_frame, bg="#ffffff")
+        #self.right_frame = ctk.CTkFrame(self.main_frame, fg_color="#ffffff")
         #self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        self.playlist_listbox = tk.Listbox(self.left_frame, font=font_primary, bd=0, highlightthickness=0, selectbackground="#1DB954", fg="#333")
-        self.playlist_listbox.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.playlist_listbox = RoundedListbox(
+            self.left_frame,
+            font=font_primary,
+            bg="#1a1a1a",
+            fg="#f5f5f5",
+            selectbackground="#2e2e2e",
+            selectforeground="#ffffff",
+            bd=0,
+            highlightthickness=0,
+            hover_bg="#333333",
+            activestyle="none",  # disattiva stile “active” di default
+        )
+        self.playlist_listbox.pack(fill="both", expand=True, padx=5, pady=5)
         self.playlist_listbox.bind("<<ListboxSelect>>", self.on_playlist_select)
-        ttk.Button(self.left_frame, text="Add Playlist", command=self.add_playlist).pack(fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.left_frame, text="Remove Playlist", command=self.remove_playlist).pack(fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.left_frame, text="Rename Playlist", command=self.rename_playlist).pack(fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.left_frame, text="Settings", command=self.open_settings).pack(fill=tk.X, padx=5, pady=20)
+        ctk.CTkButton(self.left_frame, text="Add Playlist", command=self.add_playlist).pack(fill=tk.X, padx=5, pady=2)
+        ctk.CTkButton(self.left_frame, text="Remove Playlist", command=self.remove_playlist).pack(fill=tk.X, padx=5, pady=2)
+        ctk.CTkButton(self.left_frame, text="Rename Playlist", command=self.rename_playlist).pack(fill=tk.X, padx=5, pady=2)
+        ctk.CTkButton(self.left_frame, text="Settings", command=self.open_settings).pack(fill=tk.X, padx=5, pady=20)
 
         # Info label
-        self.label_info = ttk.Label(self.left_frame, text="Hello World")
+        self.label_info = ctk.CTkLabel(self.left_frame, text="Hello World", font=("Helvetica", 10), text_color="#ffffff", fg_color="transparent")
         self.label_info.pack(fill=tk.Y, padx=1, pady=2)
         self.update_label_info(self.label_info)
 
+        # Style for the Treeview
+        style = ttk.Style(root)
+        style.theme_use("clam")
 
-        style = ttk.Style()
-        style.configure("Treeview", font=("Helvetica Neue", 12), rowheight=28)
-        style.configure("Treeview.Heading", font=("Helvetica Neue", 13, "bold"))
-        self.song_tree = ttk.Treeview(self.center_frame, columns=("ID", "Name", "Play"), show="headings", selectmode="browse")
+        style.configure(
+            "BW.Treeview",
+            background="#1a1a1a",
+            fieldbackground="#1a1a1a",
+            foreground="#f5f5f5",
+            rowheight=28,
+            font=("Helvetica Neue", 12),
+        )
+        style.map(
+            "BW.Treeview.Heading",
+            background=[("active", "#222222")],
+            foreground=[("active", "#ffffff")] 
+        )
+        style.configure(
+            "BW.Treeview.Heading",
+            background="#222222",
+            foreground="#ffffff",
+            font=("Helvetica Neue", 13, "bold"),
+            relief="flat",
+            padding=(8, 5),
+        )
+        style.configure("evenrow",  background="#242424")
+        style.configure("oddrow",   background="#2e2e2e")
+        style.configure("hover",    background="#333333")
+        style.configure("selected", background="#2e2e2e")
+        
+        # Create the Treeview
+        self.song_tree = ttk.Treeview(self.center_frame, columns=("ID", "Name", "Play"), show="headings", style="BW.Treeview", selectmode="browse")
         self.song_tree.heading("ID", text="ID")
         self.song_tree.heading("Name", text="Name")
         self.song_tree.heading("Play", text="")
@@ -146,67 +184,68 @@ class App:
         self.song_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.song_tree.bind("<Double-1>", self.edit_song)
         self.song_tree.bind("<Button-1>", self.on_treeview_click)
-        self.song_tree.tag_configure("current", background="#1DB954", foreground="white")
+        self.song_tree.tag_configure("current", background="#242424", foreground="#1ed760")
         
-        self.import_frame = tk.Frame(self.center_frame, bg="#ffffff")
+        self.import_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
         self.import_frame.pack(fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.import_frame, text="Import Song", command=self.import_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        ttk.Button(self.import_frame, text="Download YouTube", command=self.download_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        ttk.Button(self.import_frame, text="Download Spotify", command=self.download_song_spotify).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        ttk.Button(self.center_frame, text="Remove Song", command=self.remove_song).pack(fill=tk.X, padx=5, pady=2)
-        self.control_frame = tk.Frame(self.center_frame, bg="#fafafa")
+        ctk.CTkButton(self.import_frame, text="Import Song", command=self.import_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        ctk.CTkButton(self.import_frame, text="Download YouTube", command=self.download_song).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        ctk.CTkButton(self.import_frame, text="Download Spotify", command=self.download_song_spotify).pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        ctk.CTkButton(self.center_frame, text="Remove Song", command=self.remove_song).pack(fill=tk.X, padx=5, pady=2)
+        self.control_frame = ctk.CTkFrame(self.center_frame, fg_color="#000000")
         self.control_frame.pack(fill=tk.X, padx=5, pady=5)
         
         res = resource_path("res")
         global icons
-        icons = {name: tk.PhotoImage(file=os.path.join(res, f"{name}.png")).subsample(1,1) for name in ("prev","play","pause","next","shuffle")}
+        icons = {name: ctk.CTkImage(Image.open(os.path.join(res, f"{name}.png"))) for name in ("prev","play","pause","next","shuffle")}
         if settings.debug_mode: 
             for name in ("prev","play","pause","next","shuffle"): log_info("Image loaded: " + os.path.join(res, f"{name}.png")) 
         
         # Prev Button
-        self.prev_btn = ttk.Button(self.control_frame, image=icons["prev"], command=self.previous_song)
+        self.prev_btn = ctk.CTkButton(self.control_frame, hover_color="#6C6C6C", fg_color="#3A3A3A", text="", width=35, height=35, image=icons["prev"], command=self.previous_song)
         self.prev_btn.image = icons["prev"]
-        self.prev_btn.pack(side=tk.LEFT, padx=4)
+        self.prev_btn.pack(side=tk.LEFT, padx=3, pady=5)
         
         # Play/Pause Button
-        self.play_pause_btn = ttk.Button(self.control_frame, image=icons["pause"], command=self.toggle_pause)
+        self.play_pause_btn = ctk.CTkButton(self.control_frame, hover_color="#BDBDBD", fg_color="#3A3A3A", text="", width=35, height=35, image=icons["pause"], command=self.toggle_pause)
         self.play_pause_btn.image = icons["pause"]
-        self.play_pause_btn.pack(side=tk.LEFT, padx=4)
+        self.play_pause_btn.pack(side=tk.LEFT, padx=3)
         
         # Next Button
-        self.next_btn = ttk.Button(self.control_frame, image=icons["next"], command=self.next_song)
+        self.next_btn = ctk.CTkButton(self.control_frame, hover_color="#6C6C6C", fg_color="#3A3A3A", text="", width=35, height=35, image=icons["next"], command=self.next_song)
         self.next_btn.image = icons["next"]
-        self.next_btn.pack(side=tk.LEFT, padx=4)
+        self.next_btn.pack(side=tk.LEFT, padx=3)
         
         # Shuffle Button
-        self.shuffle_btn = ttk.Checkbutton(self.control_frame, image=icons["shuffle"], variable=self.shuffle_mode)
-        self.shuffle_btn.image = icons["shuffle"]
+        self.shuffle_btn = ctk.CTkCheckBox(self.control_frame, text="Shuffle", variable=self.shuffle_mode)
         self.shuffle_btn.pack(side=tk.LEFT, padx=4)
         
-        tk.Label(self.control_frame, text="Volume", font=font_primary, bg="#fafafa").pack(side=tk.LEFT, padx=8)
-        self.volume_slider = ttk.Scale(self.control_frame, from_=0, to=100, orient=tk.HORIZONTAL, command=self.change_volume)
+        ctk.CTkLabel(self.control_frame, text="Volume", font=font_primary, text_color="#ffffff", fg_color="transparent").pack(side=tk.LEFT, padx=8)
+        self.volume_slider = ctk.CTkSlider(self.control_frame, from_=0, to=100, orientation=tk.HORIZONTAL, width=130, command=self.change_volume)
         self.volume_slider.set( settings.default_volume * 100 )
         pygame.mixer.music.set_volume(settings.default_volume)
         self.volume_slider.pack(side=tk.LEFT, padx=4)
-        self.volume_label = tk.Label(self.control_frame, text=str(int(settings.default_volume*100))+"%", font=font_primary, bg="#fafafa")
+        self.volume_label = ctk.CTkLabel(self.control_frame, text=str(int(settings.default_volume*100))+"%", font=font_primary, text_color="#ffffff", fg_color="transparent")
         self.volume_label.pack(side=tk.LEFT, padx=8)
         
-        self.now_playing_label = tk.Label(self.center_frame, text="Now Playing: None", font=("Helvetica Neue", 12), bg="#ffffff")
+        self.now_playing_label = ctk.CTkLabel(self.center_frame, text="Now Playing: None", font=("Helvetica Bold", 16), text_color="#ffffff", fg_color="transparent")
         self.now_playing_label.pack(pady=5)
         
         # create the slider
-        self.slider = ttk.Scale(self.center_frame,
+        self.slider = ctk.CTkSlider(self.center_frame,
                                 from_=0,
                                 to=100,
-                                orient=tk.HORIZONTAL,
+                                orientation=tk.HORIZONTAL,
+                                width=500,
                                 command=self.slider_seek)
         self.slider.pack(fill=tk.X, padx=5, pady=5)
 
         # create the time label
-        self.slider_time_label = tk.Label(self.center_frame,
+        self.slider_time_label = ctk.CTkLabel(self.center_frame,
                                           text="00:00 / 00:00",
-                                          font=("Helvetica Neue", 10),
-                                          bg="#ffffff")
+                                          font=("Helvetica Neue", 11),
+                                          text_color="#ffffff",
+                                          fg_color="transparent")
         
         self.slider_time_label.pack(pady=(0, 10))
         
@@ -223,7 +262,7 @@ class App:
 
     def update_label_info(self, label):
         text = f"Version: {program_version} - Debug: {settings.debug_mode}"
-        label.config(text=text)
+        label.configure(text=text)
 
     def format_time(self, seconds):
         m = int(seconds) // 60
@@ -287,7 +326,7 @@ class App:
         top.title("Add Playlist")
         name_var = tk.StringVar()
         ttk.Entry(top, textvariable=name_var).pack(padx=10, pady=10)
-        ttk.Button(top, text="Save", command=lambda: self._save_new_playlist(top, name_var)).pack(pady=5)
+        ctk.CTkButton(top, text="Save", command=lambda: self._save_new_playlist(top, name_var)).pack(pady=5)
         
     def _save_new_playlist(self, top, var):
         name = var.get().strip()
@@ -324,7 +363,7 @@ class App:
                 except:
                     pass
                 self.current_song = None
-                self.now_playing_label.config(text="Now Playing: None")
+                self.now_playing_label.configure(text="Now Playing: None")
                 self.slider.set(0)
 
             if delete_files:
@@ -358,12 +397,12 @@ class App:
                 top.destroy()
             top = tk.Toplevel(self.root)
             top.title("Rename Playlist")
-            tk.Label(top, text="New Playlist Name", font=("Arial", 12)).pack(padx=5, pady=5)
+            ctk.CTkLabel(top, text="New Playlist Name", font=("Arial", 12)).pack(padx=5, pady=5)
             name_var = tk.StringVar(value=old_name)
             tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
-            tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
+            ctk.CTkButton(top, text="Save", font=("Arial", 12), command=save, fg_color="#cccccc").pack(padx=5, pady=5)
 
-    def download_song_spotify(self):
+    def download_song_spotify(self, link=None):
         top = tk.Toplevel(self.root)
         
         style = ttk.Style()
@@ -372,15 +411,18 @@ class App:
         
         top.title("Download Song from Spotify")
         top.resizable(False, False)
-        tk.Label(top, text="Spotify URL:", font=("Arial", 12)).pack(padx=5, pady=5)
-        url_var = tk.StringVar()
+        ctk.CTkLabel(top, text="Spotify URL:", font=("Arial", 12)).pack(padx=5, pady=5)
+        if link is None:
+            url_var = tk.StringVar()
+        else:
+            url_var = tk.StringVar(value=link)
         ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
         
-        progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
+        progress_label = ctk.CTkLabel(top, text="Idle", font=("Arial", 12))
         progress_label.pack(padx=5, pady=5)
         progress_bar = ttk.Progressbar(top, mode='indeterminate')
         progress_bar.pack(padx=5, pady=5, fill=tk.X)
-        cancel_btn = ttk.Button(top, text="Cancel", style='Custom.TButton')
+        cancel_btn = ctk.CTkButton(top, text="Cancel")
         cancel_btn.pack(padx=5, pady=5)
         
         def start_download():
@@ -398,7 +440,7 @@ class App:
                 log_debug(f"Downloading Spotify song with command: {command}")
 
             progress_bar.start()
-            progress_label.config(text="Downloading...")
+            progress_label.configure(text="Downloading...")
             process = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True
             )
@@ -432,6 +474,18 @@ class App:
                 log_info(f"New files by timestamp: {new_files}")
 
             if not new_files:
+                m = re.search(r'[^\s]*file already exists[^\s]*', stdout)
+                if m:
+                    messagebox.showwarning("Warning", "File already exists.")
+                    ''' if not messagebox.askyesno("Warning", "File already exists, overwrite?"):
+                        top.destroy()
+                        return
+                    else:
+                        if settings.debug_mode:
+                            log_info("File already exists, overwriting...")
+                        self.download_song_spotify(arg="") '''
+                    if settings.debug_mode:
+                        log_info("File already exists.")
                 messagebox.showwarning("Warning", "No new audio files found. \n Song is not available or it's caused by a yt-dlp error. \n Check error_log.txt")
                 
                 if settings.debug_mode:
@@ -440,13 +494,17 @@ class App:
                     
                     log_error(f"spotdl stderr:\n{stdout}", stdout)
                     
-                if not messagebox.askyesno("Try with YT", "Do you want to try with YouTube? (Recommended)"):
+                m = re.search(r'https://[^\s]*youtube[^\s]*', stdout)
+                if m and not messagebox.askyesno("Try with YT", "Do you want to try with YouTube? (Recommended)"):
                     top.destroy()
                     return
+                elif m:
+                    if settings.debug_mode:
+                        log_info("Trying with yt-dlp. Command: " + m)
+                    self.download_song(link=m.group(0))
                 else:
-                    m = re.search(r'https://[^\s]*youtube[^\s]*', stdout)
-                    if m:
-                        self.download_song(link=m.group(0))
+                    top.destroy()
+                    return
                         
                 return
 
@@ -455,9 +513,6 @@ class App:
                 if settings.debug_mode:
                     log_info("No playlist selected")
                 return
-
-            from mutagen import File as MutagenFile
-            from mutagen.id3 import ID3
 
             for fn in sorted(new_files):
                 file_path = os.path.join(sound_dir, fn)
@@ -499,6 +554,7 @@ class App:
                 self.playlists[self.selected_playlist].append(new_song)
 
             self.refresh_songs()
+            save_config_rt(self.playlists)
 
             if self.current_song and self.current_song in self.playlists.get(self.selected_playlist, []):
                 sid = self.current_song["id"]
@@ -506,7 +562,7 @@ class App:
                 self.update_highlight()
                 self.show_metadata_card(self.current_song)
 
-        download_btn = ttk.Button(
+        download_btn = ctk.CTkButton(
             top, text="Download",
             command=lambda: threading.Thread(target=start_download).start()
         )
@@ -523,22 +579,18 @@ class App:
         for w in self.meta_frame.winfo_children():
             w.destroy()
 
-        self.meta_frame.config(
-            bg="#1e1e1e",
-            bd=0,
-            highlightthickness=0
-        )
+        self.meta_frame.configure(fg_color="#1e1e1e")
         self.meta_frame.pack_propagate(False)
-        self.meta_frame.config(width=290, height=400)
+        self.meta_frame.configure(width=290, height=400)
 
         # --- COVER ART ---
         if meta.get("cover_data"):
             from io import BytesIO
-            from PIL import Image, ImageTk
+            from PIL import Image
             bio = BytesIO(meta["cover_data"])
-            img = Image.open(bio).resize((200,200))
-            photo = ImageTk.PhotoImage(img)
-            lbl = tk.Label(self.meta_frame, image=photo, bg="#1e1e1e")
+            img = Image.open(bio)
+            photo = ctk.CTkImage(img, size=(180, 180))
+            lbl = ctk.CTkLabel(self.meta_frame, image=photo, text="", text_color="#1e1e1e", fg_color="transparent")
             lbl.image = photo
             lbl.pack(pady=(10,5))
 
@@ -548,53 +600,56 @@ class App:
         info_color   = "#d1d1d1"
 
         # --- TITLE / ARTIST ---
-        tk.Label(self.meta_frame, text=meta["title"],
-                font=title_font, fg="white", bg="#1e1e1e",
+        ctk.CTkLabel(self.meta_frame, text=meta["title"],
+                font=title_font, text_color="white", fg_color="#1e1e1e",
                 wraplength=200, justify="center").pack(pady=(0,5), padx=10)
-        tk.Label(self.meta_frame, text=meta["artist"].replace("/", ", "),
-                font=artist_font, fg=info_color, bg="#1e1e1e",
+        ctk.CTkLabel(self.meta_frame, text=meta["artist"].replace("/", ", "),
+                font=artist_font, text_color=info_color, fg_color="#1e1e1e",
                 wraplength=200, justify="center").pack(pady=(0,10), padx=10)
 
         # --- DURATION & ALBUM ---
         info_str = f"{self.format_time(meta['duration'])}"
         if meta.get("album"):
             info_str += f"   •   {meta['album']}"
-        tk.Label(self.meta_frame, text=info_str,
-                font=artist_font, fg=info_color, bg="#1e1e1e").pack(pady=(0,10))
+        ctk.CTkLabel(self.meta_frame, text=info_str,
+                font=artist_font, text_color=info_color, fg_color="#1e1e1e").pack(pady=(0,10))
 
         # --- LYRICS SCROLLABLE ---
         if meta.get("lyrics"):
-            lyrics_frame = tk.Frame(self.meta_frame, bg="#1e1e1e")
+            lyrics_frame = ctk.CTkFrame(self.meta_frame, fg_color="#1e1e1e")
             lyrics_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0,10))
             scrollbar = ttk.Scrollbar(lyrics_frame, orient=tk.VERTICAL)
             text_box  = tk.Text(
                 lyrics_frame, wrap=tk.WORD, bg="#1e1e1e", fg="white",
                 font=("Noto Sans Georgian Bold", 9), bd=0, yscrollcommand=scrollbar.set
             )
-            scrollbar.config(command=text_box.yview)
+            scrollbar.configure(command=text_box.yview)
             scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
             text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             
-            lyrics_text = meta["lyrics"]
+            raw = meta["lyrics"]
 
-            lyrics_txt = re.search(r'Lyrics[:\s]*(.*)', lyrics_text, re.DOTALL)
-            if lyrics_txt:
-                lyrics = lyrics_txt.group(1).strip()
+            m1 = re.search(r'Lyrics[:\s]*(.*)', raw, re.DOTALL)
+            if m1:
+                lyrics = m1.group(1).strip()
             else:
-                lyrics = ""
-                print("Warning: nessuna corrispondenza trovata per 'Lyrics'.")
+                m2 = re.search(r'\[Intro\][:\s]*(.*)', raw, re.DOTALL)
+                if m2:
+                    lyrics = m2.group(1).strip()
+                else:
+                    lyrics = raw
+                    log_debug("No match for lyrics in metadata: using full text")
 
             lyrics = re.sub(r'[\"“”]([^\"“”]*?)[\"“”]', r'(\1)', lyrics)
-
             
-            text_box.config(state=tk.NORMAL)
+            text_box.configure(state=tk.NORMAL)
             text_box.delete("1.0", tk.END)
             text_box.insert("1.0", lyrics)
-            text_box.config(state=tk.DISABLED)
+            text_box.configure(state=tk.DISABLED)
 
         else:
-            tk.Label(self.meta_frame, text="No lyrics available", font=("Noto Sans Georgian Bold", 11), fg="gray",
-                    bg="#1e1e1e").pack(expand=True)
+            ctk.CTkLabel(self.meta_frame, text="No lyrics available", font=("Noto Sans Georgian Bold", 11), text_color="gray",
+                    fg_color="#1e1e1e").pack(expand=True)
 
     
     def import_song(self):
@@ -626,13 +681,13 @@ class App:
         top.resizable(False, False)
         top.title("Import Song")
         
-        tk.Label(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkLabel(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
         id_var = tk.StringVar(value=default_id)
         ttk.Entry(top, textvariable=id_var, width=3, font=("Arial", 12)).pack(padx=5, pady=5)
-        tk.Label(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkLabel(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
         name_var = tk.StringVar(value=default_name)
         tk.Entry(top, textvariable=name_var, width=50, font=("Arial", 12)).pack(padx=5, pady=5)
-        ttk.Button(top, text="Save", command=save).pack(padx=5, pady=5)
+        ctk.CTkButton(top, text="Save", command=save).pack(padx=5, pady=5)
 
     def download_song(self, link=None):
         top = tk.Toplevel(self.root)
@@ -643,18 +698,18 @@ class App:
         top.title("Download Song from YouTube")
         top.resizable(False, False)
         
-        tk.Label(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkLabel(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
         if link is None:
             url_var = tk.StringVar()
         else:
             url_var = tk.StringVar(value=link)
         ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
         
-        progress_label = tk.Label(top, text="Idle", font=("Arial", 12))
+        progress_label = ctk.CTkLabel(top, text="Idle", font=("Arial", 12))
         progress_label.pack(padx=5, pady=5)
         progress_bar = ttk.Progressbar(top, mode='indeterminate')
         progress_bar.pack(padx=5, pady=5, fill=tk.X)
-        cancel_btn = ttk.Button(top, text="Cancel", style='Custom.TButton')
+        cancel_btn = ctk.CTkButton(top, text="Cancel")
         cancel_btn.pack(padx=5, pady=5)
         
         def start_download():
@@ -674,7 +729,7 @@ class App:
 
                         
             progress_bar.start()
-            progress_label.config(text="Downloading...")
+            progress_label.configure(text="Downloading...")
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
             cancelled = False
 
@@ -682,14 +737,14 @@ class App:
                 nonlocal cancelled
                 cancelled = True
                 process.terminate()
-                progress_label.config(text="Cancelling...")
+                progress_label.configure(text="Cancelling...")
             
-            cancel_btn.config(command=cancel_download)
+            cancel_btn.configure(command=cancel_download)
             stdout, stderr = process.communicate()
             progress_bar.stop()
             
             if cancelled:
-                progress_label.config(text="Download cancelled.")
+                progress_label.configure(text="Download cancelled.")
                 if settings.debug_mode:
                     log_info("Download cancelled")
                 top.after(2000, top.destroy)
@@ -700,7 +755,7 @@ class App:
                     log_error(f"Download failed: {stderr}", stderr)
                 top.destroy()
                 return
-            progress_label.config(text="Download complete.")
+            progress_label.configure(text="Download complete.")
             top.after(1000, top.destroy)
             
             t.sleep(1)  
@@ -718,6 +773,7 @@ class App:
                 new_song = {"id": default_id, "name": filename, "file": file_path}
                 self.playlists[self.selected_playlist].append(new_song)
             self.refresh_songs()
+            save_config_rt(self.playlists)
         
             if self.current_song and self.current_song in self.playlists.get(self.selected_playlist, []):
                 sid = self.current_song["id"]
@@ -725,7 +781,7 @@ class App:
                 self.update_highlight()
                 self.show_metadata_card(self.current_song)
         
-        download_btn = ttk.Button(top, text="Download",
+        download_btn = ctk.CTkButton(top, text="Download",
                                 command=lambda: threading.Thread(target=start_download).start()
                                 )
         download_btn.pack(padx=5, pady=5)
@@ -751,7 +807,7 @@ class App:
             except:
                 pass
             self.current_song = None
-            self.now_playing_label.config(text="Now Playing: None")
+            self.now_playing_label.configure(text="Now Playing: None")
             self.slider.set(0)
 
         delete_file = False
@@ -813,13 +869,13 @@ class App:
             top.destroy()
         top = tk.Toplevel(self.root)
         top.title("Edit Song")
-        tk.Label(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkLabel(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
         id_var = tk.StringVar(value=song["id"])
         tk.Entry(top, textvariable=id_var, font=("Arial", 12)).pack(padx=5, pady=5)
-        tk.Label(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkLabel(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
         name_var = tk.StringVar(value=song["name"])
         tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
-        tk.Button(top, text="Save", font=("Arial", 12), command=save, bg="#cccccc").pack(padx=5, pady=5)
+        ctk.CTkButton(top, text="Save", font=("Arial", 12), command=save, fg_color="#cccccc").pack(padx=5, pady=5)
 
     def play_song(self, song=None):
         if song is None:
@@ -856,9 +912,8 @@ class App:
         self.seek_offset = 0
         self.paused_position = None
         self.is_paused = False
-        self.play_pause_btn.config(text="Pause")
-        self.slider.config(to=self.current_song_length)
-        self.now_playing_label.config(text=f"{song['name']}")
+        self.slider.configure(to=self.current_song_length)
+        self.now_playing_label.configure(text=f"{song['name']}")
         songs = sorted(self.playlists[self.selected_playlist], key=lambda s: int(s["id"]))
         for index, s in enumerate(songs):
             if s["id"] == song["id"]:
@@ -894,14 +949,14 @@ class App:
             self.seek_offset = self.paused_position
             self.paused_position = None
             self.is_paused = False
-            self.play_pause_btn.config(image=icons["pause"])
+            self.play_pause_btn.configure(image=icons["pause"])
             if settings.debug_mode:
                 log_debug("Song unpaused")
         else:
             pygame.mixer.music.pause()
             self.paused_position = t.time() - self.start_time + self.seek_offset
             self.is_paused = True
-            self.play_pause_btn.config(image=icons["play"])
+            self.play_pause_btn.configure(image=icons["play"])
             if settings.debug_mode:
                 log_debug("Song paused")
 
@@ -923,6 +978,7 @@ class App:
                 index = self.current_song_index if self.current_song_index is not None else 0
                 next_index = (index + 1) % len(songs)
                 next_song = songs[next_index]
+                
         self.play_song(next_song)
 
     def previous_song(self):
@@ -963,7 +1019,7 @@ class App:
         pygame.mixer.music.set_volume(vol)
         try:
             text = f"{int(vol * 100)}%"
-            self.volume_label.config(text=text)
+            self.volume_label.configure(text=text)
         except Exception as e:
             if settings.debug_mode:
                 log_error(f"Error setting volume: {e}", e)
@@ -980,14 +1036,14 @@ class App:
                 current_pos = t.time() - self.start_time + self.seek_offset
 
             self.slider_updating = True
-            self.slider.config(command=None)
+            self.slider.configure(command=None)
             self.slider.set(current_pos)
-            self.slider.config(command=self.slider_seek)
+            self.slider.configure(command=self.slider_seek)
             self.slider_updating = False
 
             total = self.current_song_length + 1
             elapsed = int(current_pos)
-            self.slider_time_label.config(
+            self.slider_time_label.configure(
                 text=f"{self.format_time(elapsed)} / {self.format_time(total)}"
             )
 
@@ -1024,6 +1080,7 @@ class App:
         self.root.destroy()
 
 if __name__ == "__main__":
-    window = tk.Tk()
+    window = ctk.CTk()
     app = App(window)
+    window.minsize(950, 550)
     window.mainloop()
