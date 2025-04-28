@@ -19,3 +19,10 @@ v 0.3 Stable
 - add "ask every time" & default volume in settings ✅
 - add volume indicator (0-100%) ✅
 - add "reset to default" button in settings ✅
+
+-------------------------------
+
+v 0.4 Beta
+- new design (customtkinter)
+- card for metadata
+- style

@@ -1,2 +1,4 @@
 /build
 /src/dep/__pycache__
+/src/ui/tkStyle/__pycache__
+/src/ui/widget/__pycache__

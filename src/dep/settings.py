@@ -6,6 +6,7 @@ from termcolor import colored
 # src/dep/settings.py
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import customtkinter as ctk
 
 program_version = '0.4 (Beta)'
 
@@ -113,51 +114,47 @@ class SettingsWindow:
         
         self.win = tk.Toplevel(master)
         self.win.attributes('-topmost', True)
-        self.win.geometry("600x300")
         self.win.resizable(False, False)
         self.win.title("Application Settings")
        
-        self.frame = ttk.Frame(self.win, padding=10)
+        self.frame = ctk.CTkFrame(self.win)
         self.frame.pack(fill=tk.BOTH, expand=True)
         
-        style = ttk.Style()
-        style.configure('Custom.TButton', font=('Helvetica', 9), padding=(5, 1))
-        
-        ttk.Label(self.frame, text="Default Download Path").grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(self.frame, text="Default Download Path").grid(row=0, column=0, sticky="w")
         self.path_var = tk.StringVar(value=settings.default_download_path)
-        ttk.Entry(self.frame, textvariable=self.path_var, width=40).grid(row=0, column=3)
+        ctk.CTkEntry(self.frame, textvariable=self.path_var, width=280).grid(row=0, column=3)
         
-        self.browse_button = ttk.Button(self.frame, text="Browse", command=self.browse_path, style='Custom.TButton')
+        self.browse_button = ctk.CTkButton(self.frame, text="Browse", command=self.browse_path)
         self.browse_button.grid(row=0, column=4, padx=1)   
         
         # Debug mode checkbox     
         self.debug_var = tk.BooleanVar(value=settings.debug_mode)
-        ttk.Checkbutton(self.frame, text="Enable Debug Mode", variable=self.debug_var).grid(row=1, column=0, columnspan=3, sticky="w", pady=5)
-        tk.Label(self.frame, text="Make sure to have the \"Soundify_debug.exe\" installed.").grid(row=1, column=3, columnspan=2, sticky="w", pady=5)
+        ctk.CTkCheckBox(self.frame, text="Enable Debug Mode", variable=self.debug_var).grid(row=1, column=0, columnspan=3, sticky="w", pady=5)
+        ctk.CTkLabel(self.frame, text="Make sure to have the \"Soundify_debug.exe\" installed.").grid(row=1, column=3, columnspan=2, sticky="w", pady=5)
         
         # Ask everytime checkbox     
         self.ask_var = tk.BooleanVar(value=settings.ask_on_delete)
-        ttk.Checkbutton(self.frame, text="Ask everytime", variable=self.ask_var).grid(row=2, column=0, columnspan=3, sticky="w", pady=5)
+        ctk.CTkCheckBox(self.frame, text="Ask everytime", variable=self.ask_var).grid(row=2, column=0, columnspan=3, sticky="w", pady=5)
         
         
         # add in later versions
         #self.audio_var = tk.StringVar(value=settings.audio_output_device)
-        #ttk.Label(self.frame, text="Audio Output Device").grid(row=2, column=0, sticky="w")
-        #ttk.Entry(self.frame, textvariable=self.audio_var, width=30).grid(row=2, column=1, columnspan=2, sticky="w")
+        #ctk.CTkLabel(self.frame, text="Audio Output Device").grid(row=2, column=0, sticky="w")
+        #ctk.CTkEntry(self.frame, textvariable=self.audio_var, width=30).grid(row=2, column=1, columnspan=2, sticky="w")
         
-        ttk.Label(self.frame, text="Custom YouTube Command").grid(row=3, column=0, sticky="w", pady=5)
+        ctk.CTkLabel(self.frame, text="Custom YouTube Command").grid(row=3, column=0, sticky="w", pady=5)
         self.yt_cmd = tk.Text(self.frame, height=2, width=40); self.yt_cmd.insert("1.0", settings.youtube_cmd); self.yt_cmd.grid(row=3, column=3, columnspan=2)
-        ttk.Label(self.frame, text="Custom Spotify Command").grid(row=4, column=0, sticky="w", pady=5)
+        ctk.CTkLabel(self.frame, text="Custom Spotify Command").grid(row=4, column=0, sticky="w", pady=5)
         self.sp_cmd = tk.Text(self.frame, height=2, width=40); self.sp_cmd.insert("1.0", settings.spotify_cmd); self.sp_cmd.grid(row=4, column=3, columnspan=2)
         
         # Default volume level
-        ttk.Label(self.frame, text="Default Volume").grid(row=5, column=0, sticky="w", pady=5)
+        ctk.CTkLabel(self.frame, text="Default Volume").grid(row=5, column=0, sticky="w", pady=5)
         self.volume_var = tk.StringVar(value=int(settings.default_volume*100))  # Convert to percentage
-        ttk.Entry(self.frame, textvariable=self.volume_var, width=3).grid(row=5, column=1, pady=5)
-        ttk.Label(self.frame, text="%").grid(row=5, column=2, sticky="w", pady=5)
+        ctk.CTkEntry(self.frame, textvariable=self.volume_var, width=38).grid(row=5, column=1, pady=5)
+        ctk.CTkLabel(self.frame, text="%").grid(row=5, column=2, sticky="w", pady=5)
         
-        ttk.Button(self.frame, text="Save", command=self.save).grid(row=7, column=0, columnspan=3, pady=10)
-        ttk.Button(self.frame, text="Reset to default", command=self.reset, style='Custom.TButton').grid(row=7, column=3, columnspan=3, pady=10)
+        ctk.CTkButton(self.frame, text="Save", command=self.save).grid(row=7, column=0, columnspan=3, pady=10)
+        ctk.CTkButton(self.frame, text="Reset to default", command=self.reset).grid(row=7, column=3, columnspan=3, pady=10)
         
     def browse_path(self):
         path = filedialog.askdirectory()
@@ -177,7 +174,8 @@ class SettingsWindow:
         
         if self.on_change: self.on_change(settings)
         if self.on_close: self.on_close()
-        
+        if settings.debug_mode:
+            log_debug("Settings saved (src/dep/settings.json)")
         messagebox.showinfo("Settings", "Settings saved.")
         
         self.win.destroy()
@@ -204,5 +202,6 @@ class SettingsWindow:
         
         if self.on_change: self.on_change(settings)
         if self.on_close: self.on_close()
-        
+        if settings.debug_mode:
+            log_debug("Settings restored to default (src/dep/settings.json)")
         messagebox.showinfo("Settings", "Settings restored to default.")
