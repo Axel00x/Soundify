@@ -623,13 +623,16 @@ class App:
                 font=artist_font, text_color=info_color, fg_color="#1e1e1e").pack()
         
         genre_txt = "Genre: "
-        if len(meta["genre"]) == 0:
-            genre_txt += "Unknown"
-        else:
+        try:
             for i in range(len(meta["genre"])):
                 if settings.debug_mode:
                     log_debug(f"Genre: {meta['genre'][i]}") 
                 genre_txt += meta["genre"][i]
+        except Exception as e:
+            if settings.debug_mode:
+                log_debug(f"Error: {e}")
+            genre_txt += "Unknown"
+            pass
         
         ctk.CTkLabel(self.meta_frame, text=genre_txt,
                 font=artist_font, text_color=info_color, fg_color="transparent",
@@ -639,7 +642,7 @@ class App:
         if meta.get("lyrics"):
             lyrics_frame = ctk.CTkFrame(self.meta_frame, fg_color="#1e1e1e")
             lyrics_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0,10))
-            scrollbar = ttk.Scrollbar(lyrics_frame, orient=tk.VERTICAL)
+            scrollbar = ctk.CTkScrollbar(lyrics_frame, orientation=tk.VERTICAL)
             text_box  = tk.Text(
                 lyrics_frame, wrap=tk.WORD, bg="#1e1e1e", fg="white",
                 font=("Noto Sans Georgian Bold", 9), bd=0, yscrollcommand=scrollbar.set
