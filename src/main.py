@@ -48,6 +48,9 @@ def extract_metadata(file_path):
         usl = id3.getall("USLT")
         if usl:
             meta["lyrics"] = usl[0].text
+        tcon = id3.getall("TCON")
+        if tcon:
+            meta["genre"] = tcon[0].text
     except Exception:
         pass
 
@@ -77,7 +80,8 @@ class Song:
             pygame.mixer.music.load(self.file)
             pygame.mixer.music.play()
         except Exception as e:
-            messagebox.showerror("Error", f"Cannot play song: {e}")
+            messagebox.showerror("Error", f"OK: {e}")
+            
 
 class App:
     def __init__(self, root):
@@ -133,7 +137,7 @@ class App:
             bd=0,
             highlightthickness=0,
             hover_bg="#333333",
-            activestyle="none",  # disattiva stile “active” di default
+            activestyle="none",
         )
         self.playlist_listbox.pack(fill="both", expand=True, padx=5, pady=5)
         self.playlist_listbox.bind("<<ListboxSelect>>", self.on_playlist_select)
@@ -232,7 +236,7 @@ class App:
         self.volume_label.pack(side=tk.LEFT, padx=8)
         
         self.now_playing_label = ctk.CTkLabel(self.center_frame, text="Now Playing: None", font=("Helvetica Bold", 16), text_color="#ffffff", fg_color="transparent")
-        self.now_playing_label.pack(pady=5)
+        self.now_playing_label.pack(pady=(5, 0))
         
         # create the slider
         self.slider = ctk.CTkSlider(self.center_frame,
@@ -325,10 +329,10 @@ class App:
 
 
     def add_playlist(self):
-        top = tk.Toplevel(self.root)
+        top = ctk.CTkToplevel(self.root)
         top.title("Add Playlist")
         name_var = tk.StringVar()
-        ttk.Entry(top, textvariable=name_var).pack(padx=10, pady=10)
+        ctk.CTkEntry(top, textvariable=name_var).pack(padx=10, pady=10)
         ctk.CTkButton(top, text="Save", command=lambda: self._save_new_playlist(top, name_var)).pack(pady=5)
         
     def _save_new_playlist(self, top, var):
@@ -398,32 +402,33 @@ class App:
                 self.playlists[new_name] = self.playlists.pop(old_name)
                 self.refresh_playlists()
                 top.destroy()
-            top = tk.Toplevel(self.root)
+            top = ctk.CTkToplevel(self.root)
             top.title("Rename Playlist")
             ctk.CTkLabel(top, text="New Playlist Name", font=("Arial", 12)).pack(padx=5, pady=5)
             name_var = tk.StringVar(value=old_name)
-            tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
+            ctk.CTkEntry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
             ctk.CTkButton(top, text="Save", font=("Arial", 12), command=save, fg_color="#cccccc").pack(padx=5, pady=5)
 
     def download_song_spotify(self, link=None):
-        top = tk.Toplevel(self.root)
+        top = ctk.CTkToplevel(self.root)
         
         style = ttk.Style()
         style.configure('Custom.TButton', font=('Helvetica', 9), padding=(5, 1))
 
         
         top.title("Download Song from Spotify")
+        top.attributes('-topmost', True)
         top.resizable(False, False)
         ctk.CTkLabel(top, text="Spotify URL:", font=("Arial", 12)).pack(padx=5, pady=5)
         if link is None:
             url_var = tk.StringVar()
         else:
             url_var = tk.StringVar(value=link)
-        ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
+        ctk.CTkEntry(top, textvariable=url_var, width=370).pack(padx=5, pady=5)
         
         progress_label = ctk.CTkLabel(top, text="Idle", font=("Arial", 12))
         progress_label.pack(padx=5, pady=5)
-        progress_bar = ttk.Progressbar(top, mode='indeterminate')
+        progress_bar = ctk.CTkProgressBar(top, mode='indeterminate')
         progress_bar.pack(padx=5, pady=5, fill=tk.X)
         cancel_btn = ctk.CTkButton(top, text="Cancel")
         cancel_btn.pack(padx=5, pady=5)
@@ -615,13 +620,29 @@ class App:
         if meta.get("album"):
             info_str += f"   •   {meta['album']}"
         ctk.CTkLabel(self.meta_frame, text=info_str,
-                font=artist_font, text_color=info_color, fg_color="#1e1e1e").pack(pady=(0,10))
-
+                font=artist_font, text_color=info_color, fg_color="#1e1e1e").pack()
+        
+        genre_txt = "Genre: "
+        try:
+            for i in range(len(meta["genre"])):
+                if settings.debug_mode:
+                    log_debug(f"Genre: {meta['genre'][i]}") 
+                genre_txt += meta["genre"][i]
+        except Exception as e:
+            if settings.debug_mode:
+                log_debug(f"Error: {e}")
+            genre_txt += "Unknown"
+            pass
+        
+        ctk.CTkLabel(self.meta_frame, text=genre_txt,
+                font=artist_font, text_color=info_color, fg_color="transparent",
+                wraplength=200, justify="center").pack()
+        
         # --- LYRICS SCROLLABLE ---
         if meta.get("lyrics"):
             lyrics_frame = ctk.CTkFrame(self.meta_frame, fg_color="#1e1e1e")
             lyrics_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0,10))
-            scrollbar = ttk.Scrollbar(lyrics_frame, orient=tk.VERTICAL)
+            scrollbar = ctk.CTkScrollbar(lyrics_frame, orientation=tk.VERTICAL)
             text_box  = tk.Text(
                 lyrics_frame, wrap=tk.WORD, bg="#1e1e1e", fg="white",
                 font=("Noto Sans Georgian Bold", 9), bd=0, yscrollcommand=scrollbar.set
@@ -653,8 +674,7 @@ class App:
         else:
             ctk.CTkLabel(self.meta_frame, text="No lyrics available", font=("Noto Sans Georgian Bold", 11), text_color="gray",
                     fg_color="#1e1e1e").pack(expand=True)
-
-    
+                
     def import_song(self):
         if not self.selected_playlist:
             messagebox.showerror("Error", "Select a playlist first")
@@ -679,26 +699,28 @@ class App:
             self.refresh_songs()
             top.destroy()
             
-        top = tk.Toplevel(self.root)
+        top = ctk.CTkToplevel(self.root)
         top.configure(padx=10, pady=10)
+        top.attributes('-topmost', True)
         top.resizable(False, False)
         top.title("Import Song")
         
         ctk.CTkLabel(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
         id_var = tk.StringVar(value=default_id)
-        ttk.Entry(top, textvariable=id_var, width=3, font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkEntry(top, textvariable=id_var, width=20, font=("Arial", 12)).pack(padx=5, pady=5)
         ctk.CTkLabel(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
         name_var = tk.StringVar(value=default_name)
-        tk.Entry(top, textvariable=name_var, width=50, font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkEntry(top, textvariable=name_var, width=200, font=("Arial", 12)).pack(padx=5, pady=5)
         ctk.CTkButton(top, text="Save", command=save).pack(padx=5, pady=5)
 
     def download_song(self, link=None):
-        top = tk.Toplevel(self.root)
+        top = ctk.CTkToplevel(self.root)
         
         style = ttk.Style()
         style.configure('Custom.TButton', font=('Helvetica', 9), padding=(5, 1))
         
         top.title("Download Song from YouTube")
+        top.attributes('-topmost', True)
         top.resizable(False, False)
         
         ctk.CTkLabel(top, text="YouTube URL:", font=("Arial", 12)).pack(padx=5, pady=5)
@@ -706,11 +728,11 @@ class App:
             url_var = tk.StringVar()
         else:
             url_var = tk.StringVar(value=link)
-        ttk.Entry(top, textvariable=url_var, width=70).pack(padx=5, pady=5)
+        ctk.CTkEntry(top, textvariable=url_var, width=370).pack(padx=5, pady=5)
         
         progress_label = ctk.CTkLabel(top, text="Idle", font=("Arial", 12))
         progress_label.pack(padx=5, pady=5)
-        progress_bar = ttk.Progressbar(top, mode='indeterminate')
+        progress_bar = ctk.CTkProgressBar(top, mode='indeterminate')
         progress_bar.pack(padx=5, pady=5, fill=tk.X)
         cancel_btn = ctk.CTkButton(top, text="Cancel")
         cancel_btn.pack(padx=5, pady=5)
@@ -870,14 +892,14 @@ class App:
             song["name"] = new_name
             self.refresh_songs()
             top.destroy()
-        top = tk.Toplevel(self.root)
+        top = ctk.CTkToplevel(self.root)
         top.title("Edit Song")
         ctk.CTkLabel(top, text="Song ID", font=("Arial", 12)).pack(padx=5, pady=5)
         id_var = tk.StringVar(value=song["id"])
-        tk.Entry(top, textvariable=id_var, font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkEntry(top, textvariable=id_var, font=("Arial", 12)).pack(padx=5, pady=5)
         ctk.CTkLabel(top, text="Song Name", font=("Arial", 12)).pack(padx=5, pady=5)
         name_var = tk.StringVar(value=song["name"])
-        tk.Entry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
+        ctk.CTkEntry(top, textvariable=name_var, font=("Arial", 12)).pack(padx=5, pady=5)
         ctk.CTkButton(top, text="Save", font=("Arial", 12), command=save, fg_color="#cccccc").pack(padx=5, pady=5)
 
     def play_song(self, song=None):
@@ -897,49 +919,69 @@ class App:
             if song is None:
                 return
         self.current_song = song
+        
         try:
             pygame.mixer.music.load(song["file"])
             sound_obj = pygame.mixer.Sound(song["file"])
             self.current_song_length = sound_obj.get_length()
             if settings.debug_mode:
                 log_info(f"Loaded song: {song['file']}")
+                
+            pygame.mixer.music.play()
+            if settings.debug_mode:
+                log_info(f"Playing song: {song['file']}")
+            self.start_time = t.time()
+            self.seek_offset = 0
+            self.paused_position = None
+            self.is_paused = False
+            self.slider.configure(to=self.current_song_length)
+            self.now_playing_label.configure(text=f"{song['name']}")
+            songs = sorted(self.playlists[self.selected_playlist], key=lambda s: int(s["id"]))
+            for index, s in enumerate(songs):
+                if s["id"] == song["id"]:
+                    self.current_song_index = index
+                    break
+            
+            try:
+                self.update_highlight()
+                if settings.debug_mode:
+                    log_info(f"Highlight updated for song: {song['name']}")
+            except Exception as e:
+                if settings.debug_mode:
+                    log_error(f"Error updating highlight: {e}", e)
+                pass
+                
+            try:
+                self.show_metadata_card(song)
+                if settings.debug_mode:
+                    log_info(f"Metadata card shown for song: {song['name']}")
+            except Exception as e:
+                if settings.debug_mode:
+                    log_error(f"Error showing metadata card: {e}", e)
+                pass
+            
         except Exception as e:
-            messagebox.showerror("Error", f"Cannot play song: {e}")
             if settings.debug_mode:
                 log_error(f"Error loading song: {e}", e)
+
+            # Ask once: if user clicks Yes, remove; if No, do nothing
+            remove = messagebox.askyesno(
+                "Error",
+                f"Cannot play song: {e}\n\n"
+                "Remove this song from the playlist?"
+            )
+            if remove:
+                # remove from current playlist
+                self.playlists[self.selected_playlist] = [
+                    s for s in self.playlists[self.selected_playlist]
+                    if s["id"] != song["id"]
+                ]
+                self.refresh_playlists()
+                self.refresh_songs()
+                # persist the cleaned playlist
+                save_config({"playlists": self.playlists})
+
             return
-        pygame.mixer.music.play()
-        if settings.debug_mode:
-            log_info(f"Playing song: {song['file']}")
-        self.start_time = t.time()
-        self.seek_offset = 0
-        self.paused_position = None
-        self.is_paused = False
-        self.slider.configure(to=self.current_song_length)
-        self.now_playing_label.configure(text=f"{song['name']}")
-        songs = sorted(self.playlists[self.selected_playlist], key=lambda s: int(s["id"]))
-        for index, s in enumerate(songs):
-            if s["id"] == song["id"]:
-                self.current_song_index = index
-                break
-        
-        try:
-            self.update_highlight()
-            if settings.debug_mode:
-                log_info(f"Highlight updated for song: {song['name']}")
-        except Exception as e:
-            if settings.debug_mode:
-                log_error(f"Error updating highlight: {e}", e)
-            pass
-            
-        try:
-            self.show_metadata_card(song)
-            if settings.debug_mode:
-                log_info(f"Metadata card shown for song: {song['name']}")
-        except Exception as e:
-            if settings.debug_mode:
-                log_error(f"Error showing metadata card: {e}", e)
-            pass
 
     def toggle_pause(self):
         if not self.current_song:
@@ -1085,5 +1127,5 @@ class App:
 if __name__ == "__main__":
     window = ctk.CTk()
     app = App(window)
-    window.minsize(950, 550)
+    window.minsize(950, 580)
     window.mainloop()

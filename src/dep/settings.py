@@ -10,6 +10,9 @@ import customtkinter as ctk
 
 program_version = '0.4 (Beta)'
 
+ctk.set_appearance_mode("dark")
+ctk.set_widget_scaling(1.1)
+
 _settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
 
 with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\debug_log.txt'), 'w') as f:    
@@ -112,7 +115,7 @@ class SettingsWindow:
         self.on_close = on_close
         self.on_change = on_change
         
-        self.win = tk.Toplevel(master)
+        self.win = ctk.CTkToplevel(master)
         self.win.attributes('-topmost', True)
         self.win.resizable(False, False)
         self.win.title("Application Settings")
@@ -120,21 +123,21 @@ class SettingsWindow:
         self.frame = ctk.CTkFrame(self.win)
         self.frame.pack(fill=tk.BOTH, expand=True)
         
-        ctk.CTkLabel(self.frame, text="Default Download Path").grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(self.frame, text="Default Download Path").grid(row=0, column=0, sticky="w", pady=5, padx=5)
         self.path_var = tk.StringVar(value=settings.default_download_path)
         ctk.CTkEntry(self.frame, textvariable=self.path_var, width=280).grid(row=0, column=3)
         
         self.browse_button = ctk.CTkButton(self.frame, text="Browse", command=self.browse_path)
-        self.browse_button.grid(row=0, column=4, padx=1)   
+        self.browse_button.grid(row=0, column=4, pady=5, padx=5)   
         
         # Debug mode checkbox     
         self.debug_var = tk.BooleanVar(value=settings.debug_mode)
-        ctk.CTkCheckBox(self.frame, text="Enable Debug Mode", variable=self.debug_var).grid(row=1, column=0, columnspan=3, sticky="w", pady=5)
-        ctk.CTkLabel(self.frame, text="Make sure to have the \"Soundify_debug.exe\" installed.").grid(row=1, column=3, columnspan=2, sticky="w", pady=5)
+        ctk.CTkCheckBox(self.frame, text="Enable Debug Mode", variable=self.debug_var).grid(row=1, column=0, columnspan=3, sticky="w", pady=5, padx=5)
+        ctk.CTkLabel(self.frame, text="Make sure to have the \"Soundify_debug.exe\" installed.", text_color="yellow").grid(row=1, column=3, columnspan=2, sticky="w", pady=5, padx=5)
         
         # Ask everytime checkbox     
         self.ask_var = tk.BooleanVar(value=settings.ask_on_delete)
-        ctk.CTkCheckBox(self.frame, text="Ask everytime", variable=self.ask_var).grid(row=2, column=0, columnspan=3, sticky="w", pady=5)
+        ctk.CTkCheckBox(self.frame, text="Ask everytime", variable=self.ask_var).grid(row=2, column=0, columnspan=3, sticky="w", pady=5, padx=5)
         
         
         # add in later versions
@@ -142,16 +145,16 @@ class SettingsWindow:
         #ctk.CTkLabel(self.frame, text="Audio Output Device").grid(row=2, column=0, sticky="w")
         #ctk.CTkEntry(self.frame, textvariable=self.audio_var, width=30).grid(row=2, column=1, columnspan=2, sticky="w")
         
-        ctk.CTkLabel(self.frame, text="Custom YouTube Command").grid(row=3, column=0, sticky="w", pady=5)
-        self.yt_cmd = tk.Text(self.frame, height=2, width=40); self.yt_cmd.insert("1.0", settings.youtube_cmd); self.yt_cmd.grid(row=3, column=3, columnspan=2)
-        ctk.CTkLabel(self.frame, text="Custom Spotify Command").grid(row=4, column=0, sticky="w", pady=5)
-        self.sp_cmd = tk.Text(self.frame, height=2, width=40); self.sp_cmd.insert("1.0", settings.spotify_cmd); self.sp_cmd.grid(row=4, column=3, columnspan=2)
+        ctk.CTkLabel(self.frame, text="Custom YouTube Command").grid(row=3, column=0, sticky="w", pady=5, padx=5)
+        self.yt_cmd = ctk.CTkEntry(self.frame, height=30, width=450); self.yt_cmd.insert(1, settings.youtube_cmd); self.yt_cmd.grid(row=3, column=3, columnspan=2)
+        ctk.CTkLabel(self.frame, text="Custom Spotify Command").grid(row=4, column=0, sticky="w", pady=5, padx=5)
+        self.sp_cmd = ctk.CTkEntry(self.frame, height=30, width=450); self.sp_cmd.insert(1, settings.spotify_cmd); self.sp_cmd.grid(row=4, column=3, columnspan=2)
         
         # Default volume level
-        ctk.CTkLabel(self.frame, text="Default Volume").grid(row=5, column=0, sticky="w", pady=5)
+        ctk.CTkLabel(self.frame, text="Default Volume").grid(row=5, column=0, sticky="w", pady=5, padx=5)
         self.volume_var = tk.StringVar(value=int(settings.default_volume*100))  # Convert to percentage
-        ctk.CTkEntry(self.frame, textvariable=self.volume_var, width=38).grid(row=5, column=1, pady=5)
-        ctk.CTkLabel(self.frame, text="%").grid(row=5, column=2, sticky="w", pady=5)
+        ctk.CTkEntry(self.frame, textvariable=self.volume_var, width=38).grid(row=5, column=1, pady=5, padx=5)
+        ctk.CTkLabel(self.frame, text="%").grid(row=5, column=2, sticky="w", pady=5, padx=5)
         
         ctk.CTkButton(self.frame, text="Save", command=self.save).grid(row=7, column=0, columnspan=3, pady=10)
         ctk.CTkButton(self.frame, text="Reset to default", command=self.reset).grid(row=7, column=3, columnspan=3, pady=10)
@@ -164,8 +167,8 @@ class SettingsWindow:
         settings.debug_mode = self.debug_var.get()
         settings.ask_on_delete = self.ask_var.get()
         #settings.audio_output_device = self.audio_var.get()
-        settings.youtube_cmd = self.yt_cmd.get("1.0", "end").strip()
-        settings.spotify_cmd = self.sp_cmd.get("1.0", "end").strip()
+        settings.youtube_cmd = self.yt_cmd.get().strip()
+        settings.spotify_cmd = self.sp_cmd.get().strip()
         if int(self.volume_var.get()) < 0 or int(self.volume_var.get()) > 100:
             messagebox.showerror("Error", "Volume must be between 0 and 100.")
             return
@@ -193,10 +196,10 @@ class SettingsWindow:
         self.debug_var.set(settings.debug_mode)
         self.ask_var.set(settings.ask_on_delete)
         #self.audio_var.set(settings.audio_output_device)
-        self.yt_cmd.delete("1.0", "end")
-        self.yt_cmd.insert("1.0", settings.youtube_cmd)
-        self.sp_cmd.delete("1.0", "end")
-        self.sp_cmd.insert("1.0", settings.spotify_cmd)
+        self.yt_cmd.delete(1, "end")
+        self.yt_cmd.insert(1, settings.youtube_cmd)
+        self.sp_cmd.delete(1, "end")
+        self.sp_cmd.insert(1, settings.spotify_cmd)
         self.volume_var.set(int(settings.default_volume*100))
     
         
