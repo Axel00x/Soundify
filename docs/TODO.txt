@@ -1,7 +1,7 @@
-pyinstaller --onefile --noconsole --clean --name Soundify --add-data "src/dep;dep" --add-data "src/Sound;Sound" --add-data "src/log;log" --add-data "res;res" src/main.py
+pyinstaller --onefile --noconsole --clean --name Soundify --add-data "src/dep;dep" --add-data "src/Sound;Sound" --add-data "src/log;log" --add-data "res;res" --add-data "src/ui;ui" src/main.py
 
 debug:
-pyinstaller --onefile --clean --name Soundify_debug --add-data "src/dep;dep" --add-data "src/Sound;Sound" --add-data "src/log;log" --add-data "res;res" src/main.py
+pyinstaller --onefile --clean --name Soundify_debug --add-data "src/dep;dep" --add-data "src/Sound;Sound" --add-data "src/log;log" --add-data "res;res" --add-data "src/ui;ui" src/main.py
 
 features:
 - finish Info card
