@@ -5,3 +5,4 @@ pyinstaller --onefile --clean --name Soundify_debug --add-data "src/dep;dep" --a
 
 errors:
 - when changing playlist selected, the current song playing selector stop working (next patch)
+- real lyrics (sometimes dont work)
