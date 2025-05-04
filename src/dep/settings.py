@@ -8,7 +8,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import customtkinter as ctk
 
-program_version = '0.4 (Beta)'
+program_version = '0.4'
 
 ctk.set_appearance_mode("dark")
 ctk.set_widget_scaling(1.1)
