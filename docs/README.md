@@ -1,7 +1,7 @@
 # Soundify
 
 <div>
-    <img src="../res/preview/preview.png" alt="Preview" style="display: inline-block; width: 80%;">
+    <img src="../res/preview/v04B_preview.png" alt="Preview" style="display: inline-block; width: 100%;">
 </div>
 
 Soundify is a Song player without any limitations or ads. Enjoy a seamless music experience with all your favorite features available locally on your device.
@@ -31,9 +31,9 @@ Soundify is a Song player without any limitations or ads. Enjoy a seamless music
 ### and more!!!
 _check [changelog](changelog.txt) for more info_
 
-## v0.4 Beta Preview
+## v0.5 Beta Preview
 <div>
-    <img src="../res/preview/v04B_preview.png" alt="Preview" style="display: inline-block; width: 80%;">
+    <img src="../res/preview/v05B_preview.png" alt="No preview for this version yet" style="display: inline-block; width: 100%;">
 </div>
 
 ## Overview
