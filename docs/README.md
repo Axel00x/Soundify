@@ -16,17 +16,7 @@ Soundify is a Song player without any limitations or ads. Enjoy a seamless music
 - **Spotify Downloads**: Download songs directly from Spotify (playlists or songs).
 - **Offline Availability**: Since everything works locally, you can listen offline.
 - **Ad-Free**: Enjoy your music without any interruptions from ads.
-
-## Version 0.3 ⭐
-### Functions:
-- General settings
-- More customization and editing options for playlists, songs, and downloads
-- Changing style with icons and new style and design
-
-### Troubleshooting:
-- Support for downloads in different bitrates
-- Errors for selecting playlists
-- Errors for deleting songs (locally)
+- **Debug Mode**: for developers.
 
 ### and more!!!
 _check [changelog](changelog.txt) for more info_
@@ -43,4 +33,4 @@ Soundify is designed to provide a user-friendly interface where you can manage y
 1. **Installation**: Follow the installation guide provided in the [documentation](Installation.md).
 
 ## License
-This project is licensed under the terms of the [MIT License](LICENSE).
+No license yet.
