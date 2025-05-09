@@ -26,3 +26,7 @@ v 0.4 Beta
 - new design (customtkinter)
 - card for metadata
 - style
+
+v 0.4 Stable
+- bug fixed for v0.4B
+- exe files
