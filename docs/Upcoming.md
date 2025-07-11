@@ -1,8 +1,7 @@
-# Coming soon (v0.4)
+# Coming soon (v0.5)
 ### Functions:
-- Side card to show song info (cover, duration, artists and other metadata)
 - Ability to change the theme of the app (dark, light and default)
 
 ### Troubleshooting:
-- Highlighter error for current songs.
+- Working `.exe` files (Currently experiencing problems saving songs, I recommend momentarily using the source code to run Soundify)
 - General performance improvements
