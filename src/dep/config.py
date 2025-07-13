@@ -2,7 +2,7 @@ import os, json
 
 from .settings import log_debug, log_error, log_info
 
-_config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+_config_path = 'config.json'
 
 def load_config():
     if not os.path.exists(_config_path):

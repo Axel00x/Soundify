@@ -8,20 +8,27 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import customtkinter as ctk
 
-program_version = '0.4'
+program_version = '0.5 (Beta)'
 
 ctk.set_appearance_mode("dark")
 ctk.set_widget_scaling(1.1)
 
-_settings_path = os.path.join(os.path.dirname(__file__), 'settings.json')
+_settings_path = 'settings.json'
+_log_path = 'log'
 
-with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\debug_log.txt'), 'w') as f:    
+debug_file = os.path.join(_log_path, 'debug_log.txt')
+error_file = os.path.join(_log_path, 'error_log.txt')
+
+if not os.path.exists(_log_path):
+    os.makedirs(_log_path)
+
+with open(debug_file, 'w') as f:    
     f.write("Debug log\n")
     f.write("Version: " + program_version + "\n")
     
     f.close()
     
-with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\error_log.txt'), 'w') as f:    
+with open(error_file, 'w') as f:    
     f.write("Error log\n")
     f.write("Version: " + program_version + "\n")
     
@@ -31,7 +38,7 @@ def log_debug(msg):
     now = datetime.now().strftime("%H:%M:%S")
     print(colored(now, 'white'), colored(msg, 'green'))
     
-    with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\debug_log.txt'), 'a') as f:
+    with open(debug_file, 'a') as f:
         f.write(f"{now}: {msg}\n")
         
         f.close()
@@ -40,7 +47,7 @@ def log_info(msg):
     now = datetime.now().strftime("%H:%M:%S")
     print(colored(now, 'white'), colored(msg, 'white'))
     
-    with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\debug_log.txt'), 'a') as f:
+    with open(debug_file, 'a') as f:
         f.write(f"{now}: {msg}\n")
         
         f.close()
@@ -49,12 +56,12 @@ def log_error(msg, err=None):
     now = datetime.now().strftime("%H:%M:%S")
     print(colored(now, 'white'), colored(msg, 'red'), colored(" | Error type: ", 'blue'), colored(type(err), 'white'))
     
-    with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\debug_log.txt'), 'a') as f:
+    with open(debug_file, 'a') as f:
         f.write(f"{now}: {msg} | Error type: {type(err)}\n")
         
         f.close()
         
-    with open(os.path.join(os.path.dirname(__file__)+"\\..\\", 'log\\error_log.txt'), 'a') as f:
+    with open(error_file, 'a') as f:
         f.write(f"{now}: {msg} | Error type: {type(err)}\n")
         
         f.close()
