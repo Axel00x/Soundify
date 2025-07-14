@@ -30,3 +30,12 @@ v 0.4 Beta
 v 0.4 Stable
 - bug fixed for v0.4B
 - exe files
+
+-------------------------------
+
+v 0.5 Alpha
+- Fixed EXE files
+
+v 0.5 Beta
+- Fixed some errors in widgets
+- Fixed some errors in creating an ID for songs
