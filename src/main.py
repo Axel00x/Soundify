@@ -683,7 +683,7 @@ class App:
         if not file_path:
             return
         default_id = str(len(self.playlists[self.selected_playlist]) + 1)
-        default_name = os.path.basename(file_path)
+        default_name = os.path.basename(file_path)[:-4] # remove file extension (.mp3, .wav)
         def save():
             song_id = id_var.get().strip()
             song_name = name_var.get().strip()
@@ -693,6 +693,13 @@ class App:
             for song in self.playlists[self.selected_playlist]:
                 if song["id"] == song_id:
                     messagebox.showerror("Error", "Song ID already exists")
+                    log_error(f"Song ID already exists: {song_id}", song_id)
+                    return
+                try:
+                    int(song_id)  # Check if ID is an integer
+                except ValueError as e:
+                    messagebox.showerror("Error", "Song ID must be an integer")
+                    log_error(f"Song ID must be an integer: {song_id}", e)
                     return
             new_song = {"id": song_id, "name": song_name, "file": file_path}
             self.playlists[self.selected_playlist].append(new_song)
